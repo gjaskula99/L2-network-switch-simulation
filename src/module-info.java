@@ -1,0 +1,2 @@
+module L2SwitchSimulation {
+}
