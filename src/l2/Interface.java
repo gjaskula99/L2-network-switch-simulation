@@ -33,4 +33,12 @@ public class Interface {
 	{
 		return this.numberofHosts;
 	}
+	public State getState()
+	{
+		return this.interfaceState;
+	}
+	public void setState(State s)
+	{
+		this.interfaceState = s;
+	}
 }

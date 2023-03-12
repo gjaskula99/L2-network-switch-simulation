@@ -10,7 +10,7 @@ public class Buffer {
 		this.currentSize = 0;
 	}
 	
-	Frame buffer[];
+	public Frame buffer[];
 	int maxSize;
 	int currentSize;
 	

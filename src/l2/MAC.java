@@ -23,7 +23,12 @@ public class MAC {
 	{
 		return this.address;
 	}
-	
+	public boolean isBroadcast()
+	{
+		String str = "FFFFFFFFFFFF";
+		if(this.address == str.toCharArray()) return true;
+		return false;
+	}
 	public String getString()
 	{
 		String str = "";
@@ -34,5 +39,13 @@ public class MAC {
 			if(i != 11) str += "-";
 		}
 		return str;
+	}
+	public char getInterface()
+	{
+		return this.address[9];
+	}
+	public char getHost()
+	{
+		return this.address[11];
 	}
 }
