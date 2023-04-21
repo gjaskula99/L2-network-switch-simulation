@@ -63,4 +63,11 @@ public class Switch {
 		}
 		return str;
 	}
+	
+	public Integer getNumberOfActiveInterfaces()
+	{
+		Integer x = 0;
+		for(Integer i = 0; i < 8; i++) if(ethernet[i].getState() == State.UP) x++;
+		return x;
+	}
 }

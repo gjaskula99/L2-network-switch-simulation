@@ -69,4 +69,10 @@ public class MACTable {
 		str += "\n";
 		return str;
 	}
+	public void flush()
+	{
+		this.address.clear();
+		this.interf.clear();
+		this.validFor.clear();
+	}
 }

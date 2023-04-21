@@ -12,9 +12,12 @@ import javax.swing.ButtonGroup;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JProgressBar;
 import javax.swing.JRadioButton;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
 import javax.swing.JTextField;
 
 import l2.Interface.State;
@@ -33,6 +36,7 @@ public class Simulator extends JFrame implements ActionListener {
 	//GUI
 	JFrame window = new JFrame();
 	JLabel status = new JLabel();
+	JLabel copy = new JLabel();
 	
 	JButton buttonRun = new JButton("RUN");
 	JButton buttonStop = new JButton("HALT");
@@ -51,6 +55,8 @@ public class Simulator extends JFrame implements ActionListener {
 	JLabel frameLengthTxt = new JLabel();
 	JRadioButton frameLengthFixed = new JRadioButton();
 	JRadioButton frameLengthVary = new JRadioButton();
+	JTextField frameMinDelay = new JTextField();
+	JLabel frameMinDelayTxt = new JLabel();
 	
 	ImageIcon switchOFF = new ImageIcon("res/switchOFF.png");
 	ImageIcon switchON = new ImageIcon("res/switchON.png");
@@ -60,6 +66,16 @@ public class Simulator extends JFrame implements ActionListener {
 	JLabel picSwitch = new JLabel(switchOFF);
 	JLabel[] picPort = new JLabel[PORTNUMBER];
 	
+	JTextArea CAM = new JTextArea();
+	JScrollPane CAMScroll = new JScrollPane(CAM);
+	JLabel CAMTxt = new JLabel();
+	JButton buttonFlushCAM = new JButton();
+	JTextArea Buffer = new JTextArea();
+	JScrollPane BufferScroll = new JScrollPane(Buffer);
+	JLabel BufferTxt = new JLabel();
+	Integer[] InterfaceStrings = {0, 1, 2, 3, 4, 5, 6, 7};
+	JComboBox<Integer> BufferSelect = new JComboBox<Integer>(InterfaceStrings);
+	
 	//Logic
 	Switch mySwitch = new Switch(BUFFERSIZE);
 	
@@ -67,6 +83,8 @@ public class Simulator extends JFrame implements ActionListener {
 	Simulator()
 	{
 		//Setup GUI
+		setStatus("Creating GUI", false);
+		
 		window.setBounds(EXIT_ON_CLOSE, ABORT, 1200, 800);
 		window.setLocationRelativeTo(null);
 		window.setResizable(false);
@@ -75,10 +93,12 @@ public class Simulator extends JFrame implements ActionListener {
 		
 		status.setBounds(20, 10, 980, 40);
 		status.setFont(new Font("Serif", Font.PLAIN, 24));;
-		setStatus("Creating GUI", false);
+		copy.setBounds(5, 745, 1180, 30);
+		copy.setFont(new Font("Serif", Font.PLAIN, 12));
+		copy.setText("©Grzegorz Jaskuła 2023, supervised by prof. Maciej Stasiak, Poznan University of Technology. This software is for educational purposes only and is provided as it is.");
 		
 		iterationsTxt.setBounds(1050, 30, 140, 30);
-		iterationsTxt.setText("Run for seconds:");
+		iterationsTxt.setText("Run for seconds");
 		iterations.setBounds(1050, 60, 100, 30);
 		iterations.setText(Integer.toString(0));
 		buttonRun.setBounds(1050, 90, 100, 30);
@@ -108,12 +128,12 @@ public class Simulator extends JFrame implements ActionListener {
 		bufferSize.setText(Integer.toString(BUFFERSIZE));
 		bufferSize.setEnabled(false);
 		bufferSizeTxt.setBounds(900, 250, 90, 40);
-		bufferSizeTxt.setText("Buffer size:");
+		bufferSizeTxt.setText("Buffer size");
 		
 		switchingMode.add(switchingMode_SF);
 		switchingMode.add(switchingMode_CT);
 		switchingModeTxt.setBounds(900, 300, 200, 20);
-		switchingModeTxt.setText("Switching mode:");
+		switchingModeTxt.setText("Switching mode");
 		switchingMode_SF.setBounds(900, 330, 200, 20);
 		switchingMode_SF.setText("Store and forward");
 		switchingMode_SF.setSelected(true);
@@ -125,7 +145,7 @@ public class Simulator extends JFrame implements ActionListener {
 		frameLength.add(frameLengthFixed);
 		frameLength.add(frameLengthVary);
 		frameLengthTxt.setBounds(900, 400, 200, 20);
-		frameLengthTxt.setText("Frame length:");
+		frameLengthTxt.setText("Frame length");
 		frameLengthFixed.setBounds(900, 430, 200, 20);
 		frameLengthFixed.setText("Fixed 64B");
 		frameLengthFixed.setSelected(true);
@@ -134,6 +154,12 @@ public class Simulator extends JFrame implements ActionListener {
 		frameLengthVary.setText("64B - 1536B");
 		frameLengthVary.setEnabled(false); //TODO
 		
+		frameMinDelay.setBounds(900, 520, 200, 20);
+		frameMinDelay.setText(String.valueOf(0));
+		frameMinDelayTxt.setBounds(900, 500, 200, 20);
+		frameMinDelayTxt.setText("Minimal delay between frames");
+		
+		//Graphics
 		picSwitch.setBounds(53, 50, 947, 150);
 		for(Integer i = 0; i < PORTNUMBER; i++)
 		{
@@ -142,13 +168,38 @@ public class Simulator extends JFrame implements ActionListener {
 			picPort[i].setIcon(portOFF);
 			window.add(picPort[i]);
 		}
+		
+		//Status display
+		CAMTxt.setBounds(50, 570, 200, 25);
+		CAMTxt.setText("CAM TABLE");
+		CAMScroll.setBounds(50, 600, 550, 150);
+		CAMScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
+        CAMScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+        CAM.setText("CAM Table will be listed here");
+        CAM.setEditable(false);
+        buttonFlushCAM.setBounds(450, 570, 150, 25);
+        buttonFlushCAM.setText("Flush memory");
+        buttonFlushCAM.addActionListener(this);
+        
+        BufferTxt.setBounds(620, 570, 150, 25);
+		BufferTxt.setText("INTERFACE BUFFER");
+		BufferScroll.setBounds(620, 600, 550, 150);
+		BufferScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
+        BufferScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+        Buffer.setText("Buffer of selected interface will be showed here");
+        Buffer.setEditable(false);
+        BufferSelect.setBounds(740, 570, 60, 25);
+        BufferSelect.addActionListener(this);
+		
 		//Add to JPanel
+        setStatus("Setting up window", false);
 		window.add(buttonRun);
 		window.add(buttonStop);
 		window.add(iterationsTxt);
 		window.add(iterations);
 		window.add(status);
 		window.add(progressBar);
+		window.add(copy);
 		
 		window.add(bufferSize);
 		window.add(bufferSizeTxt);
@@ -158,8 +209,17 @@ public class Simulator extends JFrame implements ActionListener {
 		window.add(frameLengthTxt);
 		window.add(frameLengthFixed);
 		window.add(frameLengthVary);
+		window.add(frameMinDelay);
+		window.add(frameMinDelayTxt);
 		
 		window.add(picSwitch);
+		
+		window.add(CAMScroll);
+		window.add(CAMTxt);
+		window.add(buttonFlushCAM);
+		window.add(BufferScroll);
+		window.add(BufferTxt);
+		window.add(BufferSelect);
 		
 		window.setVisible(true);
 		setStatus("Ready", false);
@@ -212,6 +272,7 @@ public class Simulator extends JFrame implements ActionListener {
 				{
 					
 				}
+				CAM.setText(mySwitch.CAM.listTable());
 			}
 			isRunning = false;
 			progressBar.setValue( progressBar.getMaximum() );
@@ -232,24 +293,30 @@ public class Simulator extends JFrame implements ActionListener {
 	public void actionPerformed(ActionEvent e)
 	{
 		if(e.getSource() == buttonRun)
-		{
-			isRunning = !isRunning;
-			
+		{			
 			//Data validation
 			double d; //Iterations
+			double d2; //Delay
 			try {
 		        d = Double.parseDouble( String.valueOf(iterations.getText()) );
+		        d2 = Double.parseDouble( String.valueOf(frameMinDelay.getText()) );
 		    } 
 			catch (NumberFormatException nfe) {
 				setStatus("Invalid input - not a number", true);
 		        return;
 		    }
-			if( d <= 0)
+			if( d <= 0 || d2 < 0)
 			{
 				setStatus("Invalid input - must be greater than 0", true);
 				return;
 			}
+			if( mySwitch.getNumberOfActiveInterfaces() < 2 )
+			{
+				setStatus("Cannot transmit - at least two interfaces must be up", true);
+				return;
+			}
 			
+			isRunning = !isRunning;
 			//Start simulator
 			Task progress = new Task();
 			thread = new Thread(progress);
@@ -259,6 +326,7 @@ public class Simulator extends JFrame implements ActionListener {
 		{
 			setStatus("Simulation HALTED!", false);
 			thread.stop(); //UNSAFE
+			picSwitch.setIcon(switchOFF);
 			enableGUI();
 		}
 		for(Integer i = 0; i < PORTNUMBER; i++) {
@@ -268,12 +336,24 @@ public class Simulator extends JFrame implements ActionListener {
 					{
 					mySwitch.ethernet[i].setState(State.UP);
 					picPort[i].setIcon(portON);
+					setStatus("Interface " + i + " changed status to UP", false);
 					}
 				else {
 					mySwitch.ethernet[i].setState(State.DOWN);
 					picPort[i].setIcon(portOFF);
+					setStatus("Interface " + i + " changed status to DOWN", false);
 				}
 			}
+		}
+		if(e.getSource() == BufferSelect)
+		{
+			Buffer.setText("Rx:\n"+ mySwitch.ethernet[ (int) BufferSelect.getSelectedItem() ].Rx.getString() + "\nTx:\n" + mySwitch.ethernet[ (int) BufferSelect.getSelectedItem() ].Tx.getString() );
+		}
+		if(e.getSource() == buttonFlushCAM)
+		{
+			mySwitch.CAM.flush();
+			CAM.setText(mySwitch.CAM.listTable());
+			setStatus("CAM table flushed", false);
 		}
 	}
 	
@@ -287,14 +367,17 @@ public class Simulator extends JFrame implements ActionListener {
 	{
 		buttonRun.setEnabled(true);
 		buttonStop.setEnabled(false);
-		for(Integer i = 0; i < PORTNUMBER; i++) ethernet[i].setEnabled(true);
+		buttonFlushCAM.setEnabled(true);
+		//for(Integer i = 0; i < PORTNUMBER; i++) ethernet[i].setEnabled(true);
 	}
 	
 	public void disableGUI() //Before simulation
 	{
 		buttonRun.setEnabled(false);
 		buttonStop.setEnabled(true);
+		buttonFlushCAM.setEnabled(false);
 		for(Integer i = 0; i < PORTNUMBER; i++) ethernet[i].setEnabled(false);
+		frameMinDelay.setEnabled(false);
 	}
 	
 	public void setStatus(String msg, Boolean isError)
