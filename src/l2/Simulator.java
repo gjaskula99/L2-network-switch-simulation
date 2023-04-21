@@ -9,6 +9,7 @@ import java.time.temporal.ChronoUnit;
 
 import javax.swing.JFrame;
 import javax.swing.ButtonGroup;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JLabel;
@@ -27,6 +28,7 @@ public class Simulator extends JFrame implements ActionListener {
 	Boolean isRunning = false;
 	Thread thread;
 	static final Integer BUFFERSIZE = 10;
+	static final Integer PORTNUMBER = 8;
 	
 	//GUI
 	JFrame window = new JFrame();
@@ -57,6 +59,14 @@ public class Simulator extends JFrame implements ActionListener {
 	JRadioButton frameLengthFixed = new JRadioButton();
 	JRadioButton frameLengthVary = new JRadioButton();
 	
+	ImageIcon switchOFF = new ImageIcon("res/switchOFF.png");
+	ImageIcon switchON = new ImageIcon("res/switchON.png");
+	ImageIcon portOFF = new ImageIcon("res/portOFF.png");
+	ImageIcon portON = new ImageIcon("res/portON.png");
+	ImageIcon portTRX = new ImageIcon("res/portTRX.png");
+	JLabel picSwitch = new JLabel(switchOFF);
+	JLabel[] picPort = new JLabel[PORTNUMBER];
+	
 	//Logic
 	Switch mySwitch = new Switch(BUFFERSIZE);
 	
@@ -70,9 +80,9 @@ public class Simulator extends JFrame implements ActionListener {
 		window.setTitle("L2 network switch simulator");
 		window.setLayout(null);
 		
-		status.setBounds(20, 20, 980, 40);
+		status.setBounds(20, 10, 980, 40);
 		status.setFont(new Font("Serif", Font.PLAIN, 24));;
-		setStatus("Ready", false);
+		setStatus("Creating GUI", false);
 		
 		iterationsTxt.setBounds(1050, 30, 140, 30);
 		iterationsTxt.setText("Run for seconds:");
@@ -148,6 +158,14 @@ public class Simulator extends JFrame implements ActionListener {
 		frameLengthVary.setText("64B - 1536B");
 		frameLengthVary.setEnabled(false); //TODO
 		
+		picSwitch.setBounds(53, 50, 947, 150);
+		for(Integer i = 0; i <= 7; i++)
+		{
+			picPort[i] = new JLabel();
+			picPort[i].setBounds(250+(54*i), 120, 54, 47);
+			picPort[i].setIcon(portOFF);
+			window.add(picPort[i]);
+		}
 		//Add to JPanel
 		window.add(buttonRun);
 		window.add(buttonStop);
@@ -173,7 +191,10 @@ public class Simulator extends JFrame implements ActionListener {
 		window.add(frameLengthFixed);
 		window.add(frameLengthVary);
 		
+		window.add(picSwitch);
+		
 		window.setVisible(true);
+		setStatus("Ready", false);
 		/*mySwitch.ethernet[2].setState(State.UP);
 		mySwitch.initializeRemainingInterfaces();
 		mySwitch.ethernet[2].Rx.push(new traffic.Frame(69, 2, 1, 3, 7));
@@ -199,6 +220,8 @@ public class Simulator extends JFrame implements ActionListener {
 			mySwitch.initializeRemainingInterfaces();
 			setStatus("Running", false);
 			disableGUI();
+			picSwitch.setIcon(switchON);
+			
 			
 			time =  Integer.valueOf( iterations.getText() );
 			progressBar.setValue(0);
@@ -207,19 +230,18 @@ public class Simulator extends JFrame implements ActionListener {
 			while (true)
 			{
 				if (ChronoUnit.SECONDS.between(then, LocalDateTime.now()) >= time) break;
-				//progressBar.setValue( progressBar.getValue()+1 );
-				//if(progressBar.getValue() >= 100000000) progressBar.setValue(0);
 				progressBar.setValue((int) ChronoUnit.SECONDS.between(then, LocalDateTime.now()));
 				//
 			}
 			isRunning = false;
-			progressBar.setValue(100);
+			progressBar.setValue( progressBar.getMaximum() );
 			enableGUI();
 			
 			System.out.print(mySwitch.listInterfaces());
 			//System.out.print(mySwitch.ethernet[2].Rx.getString());
 			System.out.print(mySwitch.CAM.listTable());
 			setStatus("Completed", false);
+			picSwitch.setIcon(switchOFF);
 			
 			this.interrupt();
 		}
@@ -234,7 +256,7 @@ public class Simulator extends JFrame implements ActionListener {
 			isRunning = !isRunning;
 			
 			//Data validation
-			double d;
+			double d; //Iterations
 			try {
 		        d = Double.parseDouble( String.valueOf(iterations.getText()) );
 		    } 
@@ -261,43 +283,92 @@ public class Simulator extends JFrame implements ActionListener {
 		}
 		if(e.getSource() == ethernet0)
 		{
-			if(ethernet0.isSelected()) mySwitch.ethernet[0].setState(State.UP);
-			else mySwitch.ethernet[0].setState(State.DOWN);
+			if(ethernet0.isSelected())
+				{
+				mySwitch.ethernet[0].setState(State.UP);
+				picPort[0].setIcon(portON);
+				}
+			else {
+				mySwitch.ethernet[0].setState(State.DOWN);
+				picPort[0].setIcon(portOFF);
+			}
 		}
 		if(e.getSource() == ethernet1)
 		{
-			if(ethernet1.isSelected()) mySwitch.ethernet[1].setState(State.UP);
-			else mySwitch.ethernet[1].setState(State.DOWN);
+			if(ethernet1.isSelected()) {
+				mySwitch.ethernet[1].setState(State.UP);
+				picPort[1].setIcon(portON);
+			}
+			else {
+				mySwitch.ethernet[1].setState(State.DOWN);
+				picPort[1].setIcon(portOFF);
+			}
 		}
 		if(e.getSource() == ethernet2)
 		{
-			if(ethernet2.isSelected()) mySwitch.ethernet[2].setState(State.UP);
-			else mySwitch.ethernet[2].setState(State.DOWN);
+			if(ethernet2.isSelected()) {
+				mySwitch.ethernet[2].setState(State.UP);
+				picPort[2].setIcon(portON);
+			}
+			else {
+				mySwitch.ethernet[2].setState(State.DOWN);
+				picPort[2].setIcon(portOFF);
+			}
 		}
 		if(e.getSource() == ethernet3)
 		{
-			if(ethernet3.isSelected()) mySwitch.ethernet[3].setState(State.UP);
-			else mySwitch.ethernet[3].setState(State.DOWN);
+			if(ethernet3.isSelected()) {
+				mySwitch.ethernet[3].setState(State.UP);
+				picPort[3].setIcon(portON);
+			}
+			else {
+				mySwitch.ethernet[3].setState(State.DOWN);
+				picPort[3].setIcon(portOFF);
+			}
 		}
 		if(e.getSource() == ethernet4)
 		{
-			if(ethernet4.isSelected()) mySwitch.ethernet[4].setState(State.UP);
-			else mySwitch.ethernet[4].setState(State.DOWN);
+			if(ethernet4.isSelected()) {
+				mySwitch.ethernet[4].setState(State.UP);
+				picPort[4].setIcon(portON);
+			}
+			else {
+				mySwitch.ethernet[4].setState(State.DOWN);
+				picPort[4].setIcon(portOFF);
+			}
 		}
 		if(e.getSource() == ethernet5)
 		{
-			if(ethernet5.isSelected()) mySwitch.ethernet[5].setState(State.UP);
-			else mySwitch.ethernet[5].setState(State.DOWN);
+			if(ethernet5.isSelected()) {
+				mySwitch.ethernet[5].setState(State.UP);
+				picPort[5].setIcon(portON);
+			}
+			else {
+				mySwitch.ethernet[5].setState(State.DOWN);
+				picPort[5].setIcon(portOFF);
+			}
 		}
 		if(e.getSource() == ethernet6)
 		{
-			if(ethernet6.isSelected()) mySwitch.ethernet[6].setState(State.UP);
-			else mySwitch.ethernet[6].setState(State.DOWN);
+			if(ethernet6.isSelected()) {
+				mySwitch.ethernet[6].setState(State.UP);
+				picPort[6].setIcon(portON);
+			}
+			else {
+				mySwitch.ethernet[6].setState(State.DOWN);
+				picPort[5].setIcon(portOFF);
+			}
 		}
 		if(e.getSource() == ethernet7)
 		{
-			if(ethernet7.isSelected()) mySwitch.ethernet[7].setState(State.UP);
-			else mySwitch.ethernet[7].setState(State.DOWN);
+			if(ethernet7.isSelected()) {
+				mySwitch.ethernet[7].setState(State.UP);
+				picPort[7].setIcon(portON);
+			}
+			else {
+				mySwitch.ethernet[7].setState(State.DOWN);
+				picPort[7].setIcon(portOFF);
+			}
 		}
 	}
 	
