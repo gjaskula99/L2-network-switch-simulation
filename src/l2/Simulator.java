@@ -89,12 +89,14 @@ public class Simulator extends JFrame implements ActionListener {
 		{
 			time =  Integer.valueOf( iterations.getText() );
 			progressBar.setValue(0);
+			progressBar.setMaximum(time);
 			LocalDateTime then = LocalDateTime.now();
 			while (true)
 			{
 				if (ChronoUnit.SECONDS.between(then, LocalDateTime.now()) >= time) break;
-				progressBar.setValue( progressBar.getValue()+1 );
-				if(progressBar.getValue() >= 100000000) progressBar.setValue(0);
+				//progressBar.setValue( progressBar.getValue()+1 );
+				//if(progressBar.getValue() >= 100000000) progressBar.setValue(0);
+				progressBar.setValue((int) ChronoUnit.SECONDS.between(then, LocalDateTime.now()));
 				//
 			}
 			isRunning = false;
