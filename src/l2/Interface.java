@@ -40,5 +40,7 @@ public class Interface {
 	public void setState(State s)
 	{
 		this.interfaceState = s;
+		if(this.interfaceState == State.UP) System.out.println("Interface " + this.interfaceID + " changed status to UP");
+		else System.out.println("Interface " + this.interfaceID + " changed status to DOWN");
 	}
 }

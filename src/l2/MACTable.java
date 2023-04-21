@@ -56,7 +56,7 @@ public class MACTable {
 	}
 	public String listTable()
 	{
-		if(this.address.size() == 0) return "CAM table is empty";
+		if(this.address.size() == 0) return "CAM table is empty\n";
 		String str = "";
 		for(int i = 0; i < this.address.size(); i++)
 		{
@@ -66,6 +66,7 @@ public class MACTable {
 			str += " valid for ";
 			str += this.validFor.get(i);
 		}
+		str += "\n";
 		return str;
 	}
 }

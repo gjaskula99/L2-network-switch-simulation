@@ -23,7 +23,7 @@ public class Switch {
 	{
 		for(int i = 0; i < 8; i++)
 		{
-			if(ethernet[i].getState() != State.UP) ethernet[i].setState(State.DOWN);
+			if(ethernet[i].getState() == State.INIT) ethernet[i].setState(State.DOWN);
 		}
 	}
 	
