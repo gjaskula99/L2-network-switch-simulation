@@ -40,14 +40,7 @@ public class Simulator extends JFrame implements ActionListener {
 	JTextField iterations = new JTextField();
 	JProgressBar progressBar = new JProgressBar();
 	
-	JCheckBox ethernet0 = new JCheckBox();
-	JCheckBox ethernet1 = new JCheckBox();
-	JCheckBox ethernet2 = new JCheckBox();
-	JCheckBox ethernet3 = new JCheckBox();
-	JCheckBox ethernet4 = new JCheckBox();
-	JCheckBox ethernet5 = new JCheckBox();
-	JCheckBox ethernet6 = new JCheckBox();
-	JCheckBox ethernet7 = new JCheckBox();
+	JCheckBox[] ethernet = new JCheckBox[8];
 	JTextField bufferSize = new JTextField();
 	JLabel bufferSizeTxt = new JLabel();
 	ButtonGroup switchingMode = new ButtonGroup();
@@ -103,31 +96,14 @@ public class Simulator extends JFrame implements ActionListener {
 		progressBar.setVisible(true);
 		
 		//Switch settings
-		ethernet0.setText("eth0");
-		ethernet0.setBounds(100, 200, 90, 30);
-		ethernet0.addActionListener(this);
-		ethernet1.setText("eth1");
-		ethernet1.setBounds(200, 200, 90, 30);
-		ethernet1.addActionListener(this);
-		ethernet2.setText("eth2");
-		ethernet2.setBounds(300, 200, 90, 30);
-		ethernet2.addActionListener(this);
-		ethernet3.setText("eth3");
-		ethernet3.setBounds(400, 200, 90, 30);
-		ethernet3.addActionListener(this);
-		ethernet4.setText("eth4");
-		ethernet4.setBounds(500, 200, 90, 30);
-		ethernet4.addActionListener(this);
-		ethernet5.setText("eth5");
-		ethernet5.setBounds(600, 200, 90, 30);
-		ethernet5.addActionListener(this);
-		ethernet6.setText("eth6");
-		ethernet6.setBounds(700, 200, 90, 30);
-		ethernet6.addActionListener(this);
-		ethernet7.setText("eth7");
-		ethernet7.setBounds(800, 200, 90, 30);
-		ethernet7.addActionListener(this);
-		
+		for(Integer i = 0; i < PORTNUMBER; i++)
+		{
+			ethernet[i] = new JCheckBox();
+			ethernet[i].setText("eth" + i);
+			ethernet[i].setBounds(100 + (100*i), 200, 90, 30);
+			ethernet[i].addActionListener(this);
+			window.add(ethernet[i]);
+		}
 		bufferSize.setBounds(1000, 250, 100, 40);
 		bufferSize.setText(Integer.toString(BUFFERSIZE));
 		bufferSize.setEnabled(false);
@@ -159,7 +135,7 @@ public class Simulator extends JFrame implements ActionListener {
 		frameLengthVary.setEnabled(false); //TODO
 		
 		picSwitch.setBounds(53, 50, 947, 150);
-		for(Integer i = 0; i <= 7; i++)
+		for(Integer i = 0; i < PORTNUMBER; i++)
 		{
 			picPort[i] = new JLabel();
 			picPort[i].setBounds(250+(54*i), 120, 54, 47);
@@ -174,14 +150,6 @@ public class Simulator extends JFrame implements ActionListener {
 		window.add(status);
 		window.add(progressBar);
 		
-		window.add(ethernet0);
-		window.add(ethernet1);
-		window.add(ethernet2);
-		window.add(ethernet3);
-		window.add(ethernet4);
-		window.add(ethernet5);
-		window.add(ethernet6);
-		window.add(ethernet7);
 		window.add(bufferSize);
 		window.add(bufferSizeTxt);
 		window.add(switchingModeTxt);
@@ -231,7 +199,19 @@ public class Simulator extends JFrame implements ActionListener {
 			{
 				if (ChronoUnit.SECONDS.between(then, LocalDateTime.now()) >= time) break;
 				progressBar.setValue((int) ChronoUnit.SECONDS.between(then, LocalDateTime.now()));
-				//
+				//ACTUAL SWITCH
+				for(Integer i = 0; i < PORTNUMBER; i++) //RX
+				{
+					
+				}
+				for(Integer i = 0; i < PORTNUMBER; i++) //SWITCHING
+				{
+					
+				}
+				for(Integer i = 0; i < PORTNUMBER; i++) //TX
+				{
+					
+				}
 			}
 			isRunning = false;
 			progressBar.setValue( progressBar.getMaximum() );
@@ -281,93 +261,18 @@ public class Simulator extends JFrame implements ActionListener {
 			thread.stop(); //UNSAFE
 			enableGUI();
 		}
-		if(e.getSource() == ethernet0)
-		{
-			if(ethernet0.isSelected())
-				{
-				mySwitch.ethernet[0].setState(State.UP);
-				picPort[0].setIcon(portON);
+		for(Integer i = 0; i < PORTNUMBER; i++) {
+			if(e.getSource() == ethernet[i])
+			{
+				if(ethernet[i].isSelected())
+					{
+					mySwitch.ethernet[i].setState(State.UP);
+					picPort[i].setIcon(portON);
+					}
+				else {
+					mySwitch.ethernet[i].setState(State.DOWN);
+					picPort[i].setIcon(portOFF);
 				}
-			else {
-				mySwitch.ethernet[0].setState(State.DOWN);
-				picPort[0].setIcon(portOFF);
-			}
-		}
-		if(e.getSource() == ethernet1)
-		{
-			if(ethernet1.isSelected()) {
-				mySwitch.ethernet[1].setState(State.UP);
-				picPort[1].setIcon(portON);
-			}
-			else {
-				mySwitch.ethernet[1].setState(State.DOWN);
-				picPort[1].setIcon(portOFF);
-			}
-		}
-		if(e.getSource() == ethernet2)
-		{
-			if(ethernet2.isSelected()) {
-				mySwitch.ethernet[2].setState(State.UP);
-				picPort[2].setIcon(portON);
-			}
-			else {
-				mySwitch.ethernet[2].setState(State.DOWN);
-				picPort[2].setIcon(portOFF);
-			}
-		}
-		if(e.getSource() == ethernet3)
-		{
-			if(ethernet3.isSelected()) {
-				mySwitch.ethernet[3].setState(State.UP);
-				picPort[3].setIcon(portON);
-			}
-			else {
-				mySwitch.ethernet[3].setState(State.DOWN);
-				picPort[3].setIcon(portOFF);
-			}
-		}
-		if(e.getSource() == ethernet4)
-		{
-			if(ethernet4.isSelected()) {
-				mySwitch.ethernet[4].setState(State.UP);
-				picPort[4].setIcon(portON);
-			}
-			else {
-				mySwitch.ethernet[4].setState(State.DOWN);
-				picPort[4].setIcon(portOFF);
-			}
-		}
-		if(e.getSource() == ethernet5)
-		{
-			if(ethernet5.isSelected()) {
-				mySwitch.ethernet[5].setState(State.UP);
-				picPort[5].setIcon(portON);
-			}
-			else {
-				mySwitch.ethernet[5].setState(State.DOWN);
-				picPort[5].setIcon(portOFF);
-			}
-		}
-		if(e.getSource() == ethernet6)
-		{
-			if(ethernet6.isSelected()) {
-				mySwitch.ethernet[6].setState(State.UP);
-				picPort[6].setIcon(portON);
-			}
-			else {
-				mySwitch.ethernet[6].setState(State.DOWN);
-				picPort[5].setIcon(portOFF);
-			}
-		}
-		if(e.getSource() == ethernet7)
-		{
-			if(ethernet7.isSelected()) {
-				mySwitch.ethernet[7].setState(State.UP);
-				picPort[7].setIcon(portON);
-			}
-			else {
-				mySwitch.ethernet[7].setState(State.DOWN);
-				picPort[7].setIcon(portOFF);
 			}
 		}
 	}
@@ -382,28 +287,14 @@ public class Simulator extends JFrame implements ActionListener {
 	{
 		buttonRun.setEnabled(true);
 		buttonStop.setEnabled(false);
-		ethernet0.setEnabled(true);
-		ethernet1.setEnabled(true);
-		ethernet2.setEnabled(true);
-		ethernet3.setEnabled(true);
-		ethernet4.setEnabled(true);
-		ethernet5.setEnabled(true);
-		ethernet6.setEnabled(true);
-		ethernet7.setEnabled(true);
+		for(Integer i = 0; i < PORTNUMBER; i++) ethernet[i].setEnabled(true);
 	}
 	
 	public void disableGUI() //Before simulation
 	{
 		buttonRun.setEnabled(false);
 		buttonStop.setEnabled(true);
-		ethernet0.setEnabled(false);
-		ethernet1.setEnabled(false);
-		ethernet2.setEnabled(false);
-		ethernet3.setEnabled(false);
-		ethernet4.setEnabled(false);
-		ethernet5.setEnabled(false);
-		ethernet6.setEnabled(false);
-		ethernet7.setEnabled(false);
+		for(Integer i = 0; i < PORTNUMBER; i++) ethernet[i].setEnabled(false);
 	}
 	
 	public void setStatus(String msg, Boolean isError)
