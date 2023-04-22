@@ -382,9 +382,10 @@ public class Simulator extends JFrame implements ActionListener {
 								&& !mySwitch.ethernet[i].Rx.isEmpty()
 								&& mySwitch.ethernet[i].Tx.getCurrentSize() < mySwitch.ethernet[i].Tx.getSize())
 						{
-							mySwitch.ethernet[i].Tx.push( mySwitch.ethernet[i].Rx.buffer[0] );
-							mySwitch.ethernet[i].Tx.IdleSwitch = mySwitch.ethernet[i].Rx.buffer[0].getLength();
-							setStatus("Switching frame from interface " + mySwitch.ethernet[i].Rx.buffer[0].getSource().getInterface() + " to " + mySwitch.ethernet[i].Rx.buffer[0].getDestination().getInterface(), false);
+							int targetInterface = Character.getNumericValue(mySwitch.ethernet[i].Rx.buffer[0].getDestination().getInterface());
+							mySwitch.ethernet[targetInterface].Tx.push( mySwitch.ethernet[i].Rx.buffer[0] );
+							mySwitch.ethernet[targetInterface].Tx.IdleSwitch = mySwitch.ethernet[i].Rx.buffer[0].getLength();
+							setStatus("Switching frame from interface " + mySwitch.ethernet[i].Rx.buffer[0].getSource().getInterface() + " to " + targetInterface, false);
 							mySwitch.ethernet[i].Rx.pop();
 							
 							Integer Tx = Integer.valueOf(packetsTx[i].getText()) + 1;
