@@ -333,8 +333,13 @@ public class Simulator extends JFrame implements ActionListener {
 							
 							setStatus("Generating new frame from interface " + i + " to interface " + Integer.toString(targetHost), false);
 							Frame frame = new Frame(64, i, targetHost, 1, 1);
-							if(!mySwitch.ethernet[i].Rx.isFull()) mySwitch.ethernet[i].Rx.push(frame); //Buffer is full - frame lost
-							else
+							if(!mySwitch.ethernet[i].Rx.isFull()) //Frame received
+							{
+								mySwitch.ethernet[i].Rx.push(frame);
+								Integer Rx = Integer.valueOf(packetsRx[i].getText()) + 1;
+								packetsRx[i].setText( Integer.toString(Rx) );
+							}
+							else //Buffer is full - frame lost
 							{
 								Integer Lst = Integer.valueOf(packetsLst[i].getText()) + 1;
 								packetsLst[i].setText( Integer.toString(Lst) );
@@ -353,11 +358,11 @@ public class Simulator extends JFrame implements ActionListener {
 						//Receive existing frames
 						for(Integer j = 0; j < mySwitch.ethernet[i].Rx.getSize(); j++)
 						{
-							if(mySwitch.ethernet[i].Rx.updateStatus(j)) //Ready for switching
+							/*if(mySwitch.ethernet[i].Rx.updateStatus(j)) //Ready for switching
 							{
 								Integer Rx = Integer.valueOf(packetsRx[i].getText()) + 1;
 								packetsRx[i].setText( Integer.toString(Rx) );
-							}
+							}*/
 						}
 						
 						mySwitch.ethernet[i].Rx.Idle--;
