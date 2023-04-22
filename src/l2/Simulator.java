@@ -682,6 +682,7 @@ public class Simulator extends JFrame implements ActionListener {
 		rngType.setEnabled(true);
 		frameLengthFixed.setEnabled(true);
 		frameLengthVary.setEnabled(true);
+		handling.setEnabled(true);
 	}
 	
 	public void disableGUI() //Before simulation
@@ -696,6 +697,7 @@ public class Simulator extends JFrame implements ActionListener {
 		rngType.setEnabled(false);
 		frameLengthFixed.setEnabled(false);
 		frameLengthVary.setEnabled(false);
+		handling.setEnabled(false);
 	}
 	
 	public void setStatus(String msg, Boolean isError)
