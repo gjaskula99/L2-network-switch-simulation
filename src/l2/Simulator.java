@@ -375,7 +375,7 @@ public class Simulator extends JFrame implements ActionListener {
 							int targetHost = -1;
 							while(!targetHostUp)
 							{
-								targetHost = (int) (targetPortRNG.getNext() * 9);
+								targetHost = (int) (targetPortRNG.getNext() * 8.1);
 								if(targetHost > PORTNUMBER - 1)
 								{
 									broadcast = true;
