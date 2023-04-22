@@ -23,7 +23,7 @@ public class Switch {
 	{
 		for(int i = 0; i < 8; i++)
 		{
-			if(ethernet[i].getState() != State.UP) ethernet[i].setState(State.DOWN);
+			if(ethernet[i].getState() == State.INIT) ethernet[i].setState(State.DOWN);
 		}
 	}
 	
@@ -62,5 +62,12 @@ public class Switch {
 			str += "\n";
 		}
 		return str;
+	}
+	
+	public Integer getNumberOfActiveInterfaces()
+	{
+		Integer x = 0;
+		for(Integer i = 0; i < 8; i++) if(ethernet[i].getState() == State.UP) x++;
+		return x;
 	}
 }

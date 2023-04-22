@@ -7,8 +7,12 @@ public class TxBuffer extends Buffer {
 	public TxBuffer(int size) {
 		super(size);
 		transmitting = new int[size];
+		this.Idle = -1;
+		this.IdleSwitch = -1;
 	}
 	int transmitting[];
+	public int Idle;
+	public int IdleSwitch;
 	
 	public int getStatus(int index)
 	{
@@ -16,7 +20,10 @@ public class TxBuffer extends Buffer {
 	}
 	public void setStatus(int index, int newStatus)
 	{
-		this.transmitting[index] = newStatus;
+		if(newStatus < this.buffer[index].getLength())
+		{
+			this.transmitting[index] = newStatus;
+		}
 	}
 	public boolean updateStatus(int index)
 	{

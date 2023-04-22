@@ -17,7 +17,15 @@ public class MACTable {
 	
 	public boolean exists(MAC addr)
 	{
-		if(address.contains(addr)) return true;
+		//if(address.contains(addr)) return true;
+		for(Integer i = 0; i < this.address.size(); i++)
+		{
+			//System.out.println(addr.getString() + " " + this.address.get(i).getString());
+			if(addr.getString().equals( this.address.get(i).getString()) ) {
+				System.out.println("MAC already present in memory");
+				return true;
+			}
+		}
 		return false;
 	}
 	public int getInterfaceByMAC(MAC addr)
@@ -38,7 +46,7 @@ public class MACTable {
 	{
 		for(int i = 0; i < this.address.size(); i++)
 		{
-			if(this.validFor.get(i) == 0)
+			if(this.validFor.get(i) <= 0)
 			{
 				this.address.remove(i);
 				this.interf.remove(i);
@@ -54,8 +62,18 @@ public class MACTable {
 	{
 		for(int i = 0; i < this.validFor.size(); i++) this.validFor.set(i, this.validFor.get(i) - 1);
 	}
+	public void isAlive(l2.MAC mac)
+	{
+		for(Integer i = 0; i < this.address.size(); i++)
+		{
+			//System.out.println(addr.getString() + " " + this.address.get(i).getString());
+			if(mac.getString().equals( this.address.get(i).getString()) )
+				this.validFor.set(i, this.defaultValidity);
+		}
+	}
 	public String listTable()
 	{
+		if(this.address.size() == 0) return "CAM table is empty\n";
 		String str = "";
 		for(int i = 0; i < this.address.size(); i++)
 		{
@@ -64,7 +82,15 @@ public class MACTable {
 			str += this.interf.get(i);
 			str += " valid for ";
 			str += this.validFor.get(i);
+			str += "\n";
 		}
+		str += "\n";
 		return str;
+	}
+	public void flush()
+	{
+		this.address.clear();
+		this.interf.clear();
+		this.validFor.clear();
 	}
 }

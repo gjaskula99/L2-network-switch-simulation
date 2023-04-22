@@ -7,8 +7,10 @@ public class RxBuffer extends Buffer {
 	public RxBuffer(int size) {
 		super(size);
 		this.receiving = new int[size];
+		this.Idle = 0;
 	}
 	int receiving[];
+	public int Idle; //Time to next frame
 	
 	public int getStatus(int index)
 	{
