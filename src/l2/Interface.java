@@ -8,6 +8,7 @@ public class Interface {
 		this.interfaceID = ID;
 		this.numberofHosts = 1;
 		this.interfaceState = State.INIT;
+		this.Idle = 0;
 	}
 	public Interface(int ID, int bufferSize, int hosts)
 	{
@@ -16,12 +17,14 @@ public class Interface {
 		this.interfaceID = ID;
 		this.numberofHosts = hosts;
 		this.interfaceState = State.INIT;
+		this.Idle = 0;
 	}
 	
 	public buffer.RxBuffer Rx;
 	public buffer.TxBuffer Tx;
 	int interfaceID;
 	int numberofHosts;
+	int Idle; //Time for next frame
 	enum State {INIT, UP, DOWN};
 	State interfaceState;
 	
@@ -42,5 +45,15 @@ public class Interface {
 		this.interfaceState = s;
 		if(this.interfaceState == State.UP) System.out.println("Interface " + this.interfaceID + " changed status to UP");
 		else System.out.println("Interface " + this.interfaceID + " changed status to DOWN");
+	}
+	public Boolean isDown()
+	{
+		if(this.interfaceState == State.DOWN) return true;
+		return false;
+	}
+	public Boolean isUp()
+	{
+		if(this.interfaceState == State.UP) return true;
+		return false;
 	}
 }

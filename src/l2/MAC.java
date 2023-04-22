@@ -11,7 +11,7 @@ public class MAC {
 	{
 		String str = "172818000";
 		str += Integer.toString(interfaceID);
-		this.address = str.toCharArray();
+		//this.address = str.toCharArray();
 		str += "0";
 		str += Integer.toString(hostID);
 		this.address = str.toCharArray();

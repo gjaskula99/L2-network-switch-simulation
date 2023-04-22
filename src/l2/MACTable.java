@@ -38,7 +38,7 @@ public class MACTable {
 	{
 		for(int i = 0; i < this.address.size(); i++)
 		{
-			if(this.validFor.get(i) == 0)
+			if(this.validFor.get(i) <= 0)
 			{
 				this.address.remove(i);
 				this.interf.remove(i);
@@ -65,6 +65,7 @@ public class MACTable {
 			str += this.interf.get(i);
 			str += " valid for ";
 			str += this.validFor.get(i);
+			str += "\n";
 		}
 		str += "\n";
 		return str;
