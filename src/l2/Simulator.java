@@ -320,7 +320,7 @@ public class Simulator extends JFrame implements ActionListener {
 						/*mySwitch.ethernet[2].Rx.push(new traffic.Frame(69, 2, 1, 3, 7));
 						mySwitch.ethernet[2].Rx.push(new traffic.Frame(0, 2, 1));
 						mySwitch.CAM.push(new l2.MAC(2, 3), 2);*/
-						if(mySwitch.ethernet[i].Idle == 0) //Generate new frame
+						if(mySwitch.ethernet[i].Rx.Idle == 0) //Generate new frame
 						{
 							Boolean targetHostUp = false;
 							int targetHost = -1;
@@ -339,16 +339,31 @@ public class Simulator extends JFrame implements ActionListener {
 								Integer Lst = Integer.valueOf(packetsLst[i].getText()) + 1;
 								packetsLst[i].setText( Integer.toString(Lst) );
 							}
-							mySwitch.ethernet[i].Idle = (int) interfaceRNG[i].getNext() * 1000 + FrameLength + minDelay;
+							mySwitch.ethernet[i].Rx.Idle = (int) interfaceRNG[i].getNext() * 1000 + FrameLength + minDelay;
+							setStatus("Updating CAM table", false);
 							if(! mySwitch.CAM.exists(frame.getSource()))
 							{
 								mySwitch.CAM.push(frame.getSource(), Character.getNumericValue( frame.getSource().getInterface() ));
 							}
-							Integer Rx = Integer.valueOf(packetsRx[i].getText()) + 1;
-							packetsRx[i].setText( Integer.toString(Rx) );
+							else
+							{
+								mySwitch.CAM.isAlive(frame.getSource());
+							}
 						}
-						mySwitch.ethernet[i].Idle--;
+						//Receive existing frames
+						for(Integer j = 0; j < mySwitch.ethernet[i].Rx.getSize(); j++)
+						{
+							if(mySwitch.ethernet[i].Rx.updateStatus(j)) //Ready for switching
+							{
+								Integer Rx = Integer.valueOf(packetsRx[i].getText()) + 1;
+								packetsRx[i].setText( Integer.toString(Rx) );
+							}
+						}
+						
+						mySwitch.ethernet[i].Rx.Idle--;
 						byteCounter++;
+						if(mySwitch.ethernet[i].Rx.isEmpty()) picPort[i].setIcon(portON);
+						else picPort[i].setIcon(portTRX);
 					}
 				}
 				for(Integer i = 0; i < PORTNUMBER; i++) //SWITCHING
@@ -357,7 +372,20 @@ public class Simulator extends JFrame implements ActionListener {
 					Integer byteCounter = 0; //How many bytes interface has switched
 					while(byteCounter < 5120)
 					{
-						//
+						//Push new frame if tx is empty
+						if(mySwitch.ethernet[i].Tx.IdleSwitch <= 0
+								&& !mySwitch.ethernet[i].Rx.isEmpty()
+								&& mySwitch.ethernet[i].Tx.getCurrentSize() < mySwitch.ethernet[i].Tx.getSize())
+						{
+							mySwitch.ethernet[i].Tx.push( mySwitch.ethernet[i].Rx.buffer[0] );
+							mySwitch.ethernet[i].Tx.IdleSwitch = mySwitch.ethernet[i].Rx.buffer[0].getLength();
+							setStatus("Switching frame from interface " + mySwitch.ethernet[i].Rx.buffer[0].getSource().getInterface() + " to " + mySwitch.ethernet[i].Rx.buffer[0].getDestination().getInterface(), false);
+							mySwitch.ethernet[i].Rx.pop();
+							
+							Integer Tx = Integer.valueOf(packetsTx[i].getText()) + 1;
+							packetsTx[i].setText( Integer.toString(Tx) );
+						}
+						mySwitch.ethernet[i].Tx.IdleSwitch--;
 						byteCounter++;
 					}
 				}
@@ -367,7 +395,16 @@ public class Simulator extends JFrame implements ActionListener {
 					Integer byteCounter = 0; //How many bytes interface has transmitted
 					while(byteCounter < 5120)
 					{
-						//
+						if(mySwitch.ethernet[i].Tx.Idle <= 0
+								&& !mySwitch.ethernet[i].Tx.isEmpty())
+						{
+							setStatus("Transmitting frame from interface " + mySwitch.ethernet[i].Tx.buffer[0].getSource().getInterface() + " to " + mySwitch.ethernet[i].Tx.buffer[0].getDestination().getInterface(), false);
+							mySwitch.ethernet[i].Tx.Idle = mySwitch.ethernet[i].Tx.buffer[0].getLength();
+							mySwitch.ethernet[i].Tx.pop();
+							picPort[i].setIcon(portTRX);
+						}
+						else picPort[i].setIcon(portON);
+						mySwitch.ethernet[i].Tx.Idle--;
 						byteCounter++;
 					}
 				}

@@ -17,7 +17,15 @@ public class MACTable {
 	
 	public boolean exists(MAC addr)
 	{
-		if(address.contains(addr)) return true;
+		//if(address.contains(addr)) return true;
+		for(Integer i = 0; i < this.address.size(); i++)
+		{
+			//System.out.println(addr.getString() + " " + this.address.get(i).getString());
+			if(addr.getString().equals( this.address.get(i).getString()) ) {
+				System.out.println("MAC already present in memory");
+				return true;
+			}
+		}
 		return false;
 	}
 	public int getInterfaceByMAC(MAC addr)
@@ -53,6 +61,15 @@ public class MACTable {
 	public void decrement()
 	{
 		for(int i = 0; i < this.validFor.size(); i++) this.validFor.set(i, this.validFor.get(i) - 1);
+	}
+	public void isAlive(l2.MAC mac)
+	{
+		for(Integer i = 0; i < this.address.size(); i++)
+		{
+			//System.out.println(addr.getString() + " " + this.address.get(i).getString());
+			if(mac.getString().equals( this.address.get(i).getString()) )
+				this.validFor.set(i, this.defaultValidity);
+		}
 	}
 	public String listTable()
 	{

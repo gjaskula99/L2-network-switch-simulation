@@ -8,7 +8,6 @@ public class Interface {
 		this.interfaceID = ID;
 		this.numberofHosts = 1;
 		this.interfaceState = State.INIT;
-		this.Idle = 0;
 	}
 	public Interface(int ID, int bufferSize, int hosts)
 	{
@@ -17,14 +16,12 @@ public class Interface {
 		this.interfaceID = ID;
 		this.numberofHosts = hosts;
 		this.interfaceState = State.INIT;
-		this.Idle = 0;
 	}
 	
 	public buffer.RxBuffer Rx;
 	public buffer.TxBuffer Tx;
 	int interfaceID;
 	int numberofHosts;
-	int Idle; //Time for next frame
 	enum State {INIT, UP, DOWN};
 	State interfaceState;
 	
