@@ -96,6 +96,8 @@ public class Simulator extends JFrame implements ActionListener {
 	JLabel packetsLstTxt = new JLabel("Lost:");
 	JLabel packetsBrdTxt = new JLabel("Broadcast:");
 	JLabel packetsLstTotal = new JLabel("Total lost: 0.0%");
+	JLabel dataInbound = new JLabel("Data in: 0 Mb");
+	JLabel dataServed = new JLabel("Data served: 0 Mb");
 	
 	JTextArea CAM = new JTextArea();
 	JScrollPane CAMScroll = new JScrollPane(CAM);
@@ -140,7 +142,7 @@ public class Simulator extends JFrame implements ActionListener {
 		buttonStop.setForeground(Color.RED);
 		buttonStop.setEnabled(false);
 		buttonStop.addActionListener(this);
-		buttonClr.setBounds(30, 420, 170, 30);
+		buttonClr.setBounds(30, 500, 170, 30);
 		buttonClr.setEnabled(true);
 		buttonClr.addActionListener(this);
 		
@@ -148,7 +150,7 @@ public class Simulator extends JFrame implements ActionListener {
 		rngType.setSelectedIndex(1);
 		rngType.addActionListener(this);
 		rngTypeTxt.setBounds(1020, 150, 170, 20);
-		rngTypeTxt.setText("Random generator type");
+		rngTypeTxt.setText("Traffic generator type");
 		
 		handling.setBounds(1020, 210, 170, 20);
 		handling.setSelectedIndex(0);
@@ -192,16 +194,20 @@ public class Simulator extends JFrame implements ActionListener {
 		packetsLstTxt.setBounds(20, 310, 80, 30);
 		packetsBrdTxt.setBounds(20, 340, 80, 30);
 		packetsLstTotal.setBounds(30, 380, 500, 50);
+		dataInbound.setBounds(30, 420, 500, 30);
+		dataServed.setBounds(30, 450, 500, 30);
 		packetsRxTxt.setFont(new Font("Serif", Font.BOLD, 16));
 		packetsTxTxt.setFont(new Font("Serif", Font.BOLD, 16));
 		packetsLstTxt.setFont(new Font("Serif", Font.BOLD, 16));
 		packetsBrdTxt.setFont(new Font("Serif", Font.BOLD, 16));
 		packetsLstTotal.setFont(new Font("Serif", Font.BOLD, 20));
+		dataInbound.setFont(new Font("Serif", Font.BOLD, 20));
+		dataServed.setFont(new Font("Serif", Font.BOLD, 20));
 		packetsLstTotal.setForeground(Color.RED);
-		bufferSize.setBounds(1050, 250, 200, 50);
+		bufferSize.setBounds(1050, 250, 100, 30);
 		bufferSize.setText(Integer.toString(BUFFERSIZE));
 		bufferSize.setEnabled(false);
-		bufferSizeTxt.setBounds(950, 250, 90, 40);
+		bufferSizeTxt.setBounds(950, 250, 90, 30);
 		bufferSizeTxt.setText("Buffer size");
 		
 		switchingMode.add(switchingMode_SF);
@@ -284,6 +290,9 @@ public class Simulator extends JFrame implements ActionListener {
 		window.add(packetsLstTxt);
 		window.add(packetsBrdTxt);
 		window.add(packetsLstTotal);
+		window.add(dataInbound);
+		window.add(dataServed);
+		
 		window.add(bufferSize);
 		window.add(bufferSizeTxt);
 		window.add(switchingModeTxt);
@@ -338,6 +347,8 @@ public class Simulator extends JFrame implements ActionListener {
 			
 			Integer FrameLength = 64;
 			Integer minDelay = Integer.valueOf(frameMinDelay.getText());
+			Double dataIn = 0.0;
+			Double dataOut = 0.0;
 			time =  Integer.valueOf( iterations.getText() );
 			progressBar.setValue(0);
 			progressBar.setMaximum(time);
@@ -377,6 +388,7 @@ public class Simulator extends JFrame implements ActionListener {
 							Integer length = 64;
 							if(!frameFixedSize) length = 64 * (int) (lengthRng.getNext() * 24 + 1);
 							Frame frame = new Frame(length, i, targetHost, 1, 1);
+							dataIn += length;
 							if(broadcast) frame = new Frame(length, i, 1); //Broadcast
 							if(!mySwitch.ethernet[i].Rx.isFull()) //Frame received
 							{
@@ -404,16 +416,6 @@ public class Simulator extends JFrame implements ActionListener {
 								frame.setBroadcast();
 							}
 						}
-						//Receive existing frames
-						/*for(Integer j = 0; j < mySwitch.ethernet[i].Rx.getSize(); j++)
-						{
-							if(mySwitch.ethernet[i].Rx.updateStatus(j)) //Ready for switching
-							{
-								Integer Rx = Integer.valueOf(packetsRx[i].getText()) + 1;
-								packetsRx[i].setText( Integer.toString(Rx) );
-							}
-						}*/
-						
 						mySwitch.ethernet[i].Rx.Idle--;
 						byteCounter++;
 						if(mySwitch.ethernet[i].Rx.isEmpty()) picPort[i].setIcon(portON);
@@ -482,6 +484,7 @@ public class Simulator extends JFrame implements ActionListener {
 								&& !mySwitch.ethernet[i].Tx.isEmpty())
 						{
 							setStatus("Transmitting frame from interface " + mySwitch.ethernet[i].Tx.buffer[0].getSource().getInterface() + " to " + mySwitch.ethernet[i].Tx.buffer[0].getDestination().getInterface(), false);
+							dataOut += mySwitch.ethernet[i].Tx.buffer[0].getLength();
 							mySwitch.ethernet[i].Tx.Idle = mySwitch.ethernet[i].Tx.buffer[0].getLength();
 							mySwitch.ethernet[i].Tx.pop();
 							picPort[i].setIcon(portTRX);
@@ -511,6 +514,8 @@ public class Simulator extends JFrame implements ActionListener {
 					Double losts = (sumLst / sumTotal) * 100;
 					if(losts > 100) losts = 100.0;
 					packetsLstTotal.setText( "Total lost: " + Double.toString(losts) + "%");
+					dataInbound.setText( "Data in: " + Double.toString(dataIn / 1024 / 1024) + " Mb");
+					dataServed.setText( "Data served: " + Double.toString(dataOut / 1024 / 1024) + " Mb");
 					Buffer.setText("Rx:\n"+ mySwitch.ethernet[BufferSelect.getSelectedIndex() ].Rx.getString() + "\nTx:\n" + mySwitch.ethernet[ BufferSelect.getSelectedIndex() ].Tx.getString() );
 				}
 			} //SIMULATION END
@@ -540,6 +545,8 @@ public class Simulator extends JFrame implements ActionListener {
 			Double losts = (sumLst / sumTotal) * 100;
 			if(losts > 100) losts = 100.0;
 			packetsLstTotal.setText( "Total lost: " + Double.toString(losts) + "%");
+			dataInbound.setText( "Data in: " + Double.toString(dataIn / 1024 / 1024) + " Mb");
+			dataServed.setText( "Data served: " + Double.toString(dataOut / 1024 / 1024) + " Mb");
 			Buffer.setText("Rx:\n"+ mySwitch.ethernet[BufferSelect.getSelectedIndex() ].Rx.getString() + "\nTx:\n" + mySwitch.ethernet[ BufferSelect.getSelectedIndex() ].Tx.getString() );
 			this.interrupt();
 		}
@@ -596,7 +603,15 @@ public class Simulator extends JFrame implements ActionListener {
 				packetsBrd[i].setText("0");
 			}
 			packetsLstTotal.setText("Total lost: 0.0%");
+			dataInbound.setText("Data in: 0 Mb");
+			dataServed.setText("Data served: 0 Mb");
 			setStatus("Statistics cleared", false);
+		}
+		if(e.getSource() == buttonFlushCAM)
+		{
+			mySwitch.CAM.flush();
+			CAM.setText(mySwitch.CAM.listTable());
+			setStatus("CAM table flushed", false);
 		}
 		if(e.getSource() == rngType)
 		{
@@ -651,12 +666,6 @@ public class Simulator extends JFrame implements ActionListener {
 		if(e.getSource() == BufferSelect)
 		{
 			Buffer.setText("Rx:\n"+ mySwitch.ethernet[BufferSelect.getSelectedIndex() ].Rx.getString() + "\nTx:\n" + mySwitch.ethernet[ BufferSelect.getSelectedIndex() ].Tx.getString() );
-		}
-		if(e.getSource() == buttonFlushCAM)
-		{
-			mySwitch.CAM.flush();
-			CAM.setText(mySwitch.CAM.listTable());
-			setStatus("CAM table flushed", false);
 		}
 	}
 	
