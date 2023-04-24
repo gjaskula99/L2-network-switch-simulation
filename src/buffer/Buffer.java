@@ -42,14 +42,20 @@ public class Buffer {
 	public Frame pop()
 	{
 		assert this.currentSize > 0;
-		currentSize--;
-		Frame f = buffer[this.currentSize];
+		Frame f = buffer[this.currentSize - 1];
 		for(int i = currentSize; i >= 1; i--)
 		{
 			buffer[i - 1] = buffer[i];
 		}
+		currentSize--;
 		return f;
 	}
+	
+	public void clear()
+	{
+		for(int i = 0; i < currentSize; i++) this.pop();
+	}
+	
 	public String getString()
 	{
 		if(this.isEmpty()) return "BUFFER EMPTY";

@@ -44,6 +44,8 @@ public class Simulator extends JFrame implements ActionListener {
 	Uniform lengthRng = new Uniform();
 	
 	double TotalLost = 0.0;
+	double DataInVal = 0.0;
+	double DataOutVal = 0.0;
 	Integer handlingMode = 0;
 	Boolean frameFixedSize = true;
 	
@@ -103,6 +105,7 @@ public class Simulator extends JFrame implements ActionListener {
 	JScrollPane CAMScroll = new JScrollPane(CAM);
 	JLabel CAMTxt = new JLabel();
 	JButton buttonFlushCAM = new JButton();
+	JButton buttonClearBuffers = new JButton();
 	JTextArea Buffer = new JTextArea();
 	JScrollPane BufferScroll = new JScrollPane(Buffer);
 	JLabel BufferTxt = new JLabel();
@@ -269,6 +272,9 @@ public class Simulator extends JFrame implements ActionListener {
         Buffer.setEditable(false);
         BufferSelect.setBounds(740, 570, 60, 25);
         BufferSelect.addActionListener(this);
+        buttonClearBuffers.setText("Clear all buffers");
+        buttonClearBuffers.setBounds(820, 570, 150, 25);
+        buttonClearBuffers.addActionListener(this);
 		
 		//Add to JPanel
         setStatus("Setting up window", false);
@@ -312,6 +318,7 @@ public class Simulator extends JFrame implements ActionListener {
 		window.add(BufferScroll);
 		window.add(BufferTxt);
 		window.add(BufferSelect);
+		window.add(buttonClearBuffers);
 		
 		window.setVisible(true);
 		setStatus("Ready", false);
@@ -496,13 +503,14 @@ public class Simulator extends JFrame implements ActionListener {
 						byteCounter++;
 					}
 				}
+				//Validate CAM table
+				mySwitch.CAM.decrement();
+				mySwitch.CAM.validate();
 				//Update GUI and print status every second
 				if(oldProgress != progressBar.getValue())
 				{
 					oldProgress = progressBar.getValue();
 					CAM.setText(mySwitch.CAM.listTable());
-					mySwitch.CAM.decrement();
-					mySwitch.CAM.validate();
 					
 					double sumLst = 0.0;
 					double sumTotal = 0.0;
@@ -544,9 +552,11 @@ public class Simulator extends JFrame implements ActionListener {
 			}
 			Double losts = (sumLst / sumTotal) * 100;
 			if(losts > 100) losts = 100.0;
+			DataInVal += (dataIn / 1024 / 1024);
+			DataOutVal += (dataOut / 1024 / 1024);
 			packetsLstTotal.setText( "Total lost: " + Double.toString(losts) + "%");
-			dataInbound.setText( "Data in: " + Double.toString(dataIn / 1024 / 1024) + " Mb");
-			dataServed.setText( "Data served: " + Double.toString(dataOut / 1024 / 1024) + " Mb");
+			dataInbound.setText( "Data in: " + Double.toString(DataInVal) + " Mb");
+			dataServed.setText( "Data served: " + Double.toString(DataOutVal) + " Mb");
 			Buffer.setText("Rx:\n"+ mySwitch.ethernet[BufferSelect.getSelectedIndex() ].Rx.getString() + "\nTx:\n" + mySwitch.ethernet[ BufferSelect.getSelectedIndex() ].Tx.getString() );
 			this.interrupt();
 		}
@@ -612,6 +622,16 @@ public class Simulator extends JFrame implements ActionListener {
 			mySwitch.CAM.flush();
 			CAM.setText(mySwitch.CAM.listTable());
 			setStatus("CAM table flushed", false);
+		}
+		if(e.getSource() == buttonClearBuffers)
+		{
+			for(int i = 0; i < PORTNUMBER; i++)
+			{
+				mySwitch.ethernet[i].Rx.clear();
+				mySwitch.ethernet[i].Tx.clear();
+			}
+			setStatus("Removed frames from all buffers", false);
+			Buffer.setText("Rx:\n"+ mySwitch.ethernet[BufferSelect.getSelectedIndex() ].Rx.getString() + "\nTx:\n" + mySwitch.ethernet[ BufferSelect.getSelectedIndex() ].Tx.getString() );
 		}
 		if(e.getSource() == rngType)
 		{
