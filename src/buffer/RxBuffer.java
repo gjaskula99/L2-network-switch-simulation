@@ -38,8 +38,8 @@ public class RxBuffer extends Buffer {
 	{
 		assert this.currentSize > 0;
 		currentSize--;
-		Frame f = buffer[this.currentSize];
-		this.receiving[this.currentSize] = 0;
+		Frame f = buffer[0];
+		this.receiving[0] = 0;
 		for(int i = currentSize; i >= 1; i--)
 		{
 			buffer[i - 1] = buffer[i];

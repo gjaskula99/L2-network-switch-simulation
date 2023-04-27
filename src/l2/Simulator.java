@@ -438,7 +438,7 @@ public class Simulator extends JFrame implements ActionListener {
 						//Push new frame if ready, Tx is free and Rx not empty
 						if(mySwitch.ethernet[i].Tx.IdleSwitch <= 0
 								&& !mySwitch.ethernet[i].Rx.isEmpty()
-								&& mySwitch.ethernet[i].Tx.getCurrentSize() < mySwitch.ethernet[i].Tx.getSize())
+								&& !mySwitch.ethernet[i].Tx.isFull())
 						{
 							if(mySwitch.ethernet[i].Rx.buffer[0].getBroadcast() == false)
 							{
@@ -462,6 +462,7 @@ public class Simulator extends JFrame implements ActionListener {
 									if(mySwitch.ethernet[j].isDown() || i == j) continue;
 									mySwitch.ethernet[j].Tx.push( mySwitch.ethernet[i].Rx.buffer[0] );
 									mySwitch.ethernet[j].Tx.IdleSwitch = mySwitch.ethernet[i].Rx.buffer[0].getLength();
+									setStatus("Switching frame from interface " + mySwitch.ethernet[i].Rx.buffer[0].getSource().getInterface() + " to broadcast", false);
 									//Add handling time
 									if(handlingMode == 1) mySwitch.ethernet[j].Tx.IdleSwitch += mySwitch.ethernet[j].Rx.buffer[0].getLength() / 10;
 									if(handlingMode == 2) mySwitch.ethernet[j].Tx.IdleSwitch += mySwitch.ethernet[j].Rx.buffer[0].getLength() / 4;
@@ -524,7 +525,8 @@ public class Simulator extends JFrame implements ActionListener {
 					packetsLstTotal.setText( "Total lost: " + Double.toString(losts) + "%");
 					dataInbound.setText( "Data in: " + Double.toString(dataIn / 1024 / 1024) + " Mb");
 					dataServed.setText( "Data served: " + Double.toString(dataOut / 1024 / 1024) + " Mb");
-					Buffer.setText("Rx:\n"+ mySwitch.ethernet[BufferSelect.getSelectedIndex() ].Rx.getString() + "\nTx:\n" + mySwitch.ethernet[ BufferSelect.getSelectedIndex() ].Tx.getString() );
+					Buffer.setText("Rx (" + mySwitch.ethernet[BufferSelect.getSelectedIndex()].Rx.getCurrentSize() + "):\n"+ mySwitch.ethernet[BufferSelect.getSelectedIndex() ].Rx.getString() 
+						+ "\nTx (" + mySwitch.ethernet[BufferSelect.getSelectedIndex()].Tx.getCurrentSize() + "):\n" + mySwitch.ethernet[ BufferSelect.getSelectedIndex() ].Tx.getString() );
 				}
 			} //SIMULATION END
 			isRunning = false;
@@ -557,7 +559,8 @@ public class Simulator extends JFrame implements ActionListener {
 			packetsLstTotal.setText( "Total lost: " + Double.toString(losts) + "%");
 			dataInbound.setText( "Data in: " + Double.toString(DataInVal) + " Mb");
 			dataServed.setText( "Data served: " + Double.toString(DataOutVal) + " Mb");
-			Buffer.setText("Rx:\n"+ mySwitch.ethernet[BufferSelect.getSelectedIndex() ].Rx.getString() + "\nTx:\n" + mySwitch.ethernet[ BufferSelect.getSelectedIndex() ].Tx.getString() );
+			Buffer.setText("Rx (" + mySwitch.ethernet[BufferSelect.getSelectedIndex()].Rx.getCurrentSize() + "):\n"+ mySwitch.ethernet[BufferSelect.getSelectedIndex() ].Rx.getString() 
+				+ "\nTx (" + mySwitch.ethernet[BufferSelect.getSelectedIndex()].Tx.getCurrentSize() + "):\n" + mySwitch.ethernet[ BufferSelect.getSelectedIndex() ].Tx.getString() );
 			this.interrupt();
 		}
 	}
@@ -630,8 +633,9 @@ public class Simulator extends JFrame implements ActionListener {
 				mySwitch.ethernet[i].Rx.clear();
 				mySwitch.ethernet[i].Tx.clear();
 			}
-			setStatus("Removed frames from all buffers", false);
-			Buffer.setText("Rx:\n"+ mySwitch.ethernet[BufferSelect.getSelectedIndex() ].Rx.getString() + "\nTx:\n" + mySwitch.ethernet[ BufferSelect.getSelectedIndex() ].Tx.getString() );
+			setStatus("Removed remaining frames from all buffers", false);
+			Buffer.setText("Rx (" + mySwitch.ethernet[BufferSelect.getSelectedIndex()].Rx.getCurrentSize() + "):\n"+ mySwitch.ethernet[BufferSelect.getSelectedIndex() ].Rx.getString() 
+					+ "\nTx (" + mySwitch.ethernet[BufferSelect.getSelectedIndex()].Tx.getCurrentSize() + "):\n" + mySwitch.ethernet[ BufferSelect.getSelectedIndex() ].Tx.getString() );
 		}
 		if(e.getSource() == rngType)
 		{
@@ -685,7 +689,8 @@ public class Simulator extends JFrame implements ActionListener {
 		}
 		if(e.getSource() == BufferSelect)
 		{
-			Buffer.setText("Rx:\n"+ mySwitch.ethernet[BufferSelect.getSelectedIndex() ].Rx.getString() + "\nTx:\n" + mySwitch.ethernet[ BufferSelect.getSelectedIndex() ].Tx.getString() );
+			Buffer.setText("Rx (" + mySwitch.ethernet[BufferSelect.getSelectedIndex()].Rx.getCurrentSize() + "):\n"+ mySwitch.ethernet[BufferSelect.getSelectedIndex() ].Rx.getString() 
+				+ "\nTx (" + mySwitch.ethernet[BufferSelect.getSelectedIndex()].Tx.getCurrentSize() + "):\n" + mySwitch.ethernet[ BufferSelect.getSelectedIndex() ].Tx.getString() );
 		}
 	}
 	
