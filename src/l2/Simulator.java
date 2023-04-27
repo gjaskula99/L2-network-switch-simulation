@@ -40,7 +40,7 @@ public class Simulator extends JFrame implements ActionListener {
 	
 	enum RNGTYPE {UNIFORM, EXP, NORMAL};
 	RNGTYPE rngSelected = RNGTYPE.EXP;
-	Exponential handlingRng = new Exponential(10.0);
+	Exponential handlingRng = new Exponential(0.001);
 	Uniform lengthRng = new Uniform();
 	
 	double TotalLost = 0.0;
@@ -348,7 +348,7 @@ public class Simulator extends JFrame implements ActionListener {
 			if(rngSelected == RNGTYPE.UNIFORM)
 				for(Integer i = 0; i < PORTNUMBER; i++) interfaceRNG[i] = new Uniform();
 			if(rngSelected == RNGTYPE.EXP)
-				for(Integer i = 0; i < PORTNUMBER; i++) interfaceRNG[i] = new Exponential(1.0);
+				for(Integer i = 0; i < PORTNUMBER; i++) interfaceRNG[i] = new Exponential(0.001);
 			if(rngSelected == RNGTYPE.NORMAL)
 				for(Integer i = 0; i < PORTNUMBER; i++) interfaceRNG[i] = new Normal();
 			
@@ -408,7 +408,7 @@ public class Simulator extends JFrame implements ActionListener {
 								Integer Lst = Integer.valueOf(packetsLst[i].getText()) + 1;
 								packetsLst[i].setText( Integer.toString(Lst) );
 							}
-							mySwitch.ethernet[i].Rx.Idle = (int) interfaceRNG[i].getNext() * 1000 + FrameLength + minDelay;
+							mySwitch.ethernet[i].Rx.Idle = (int) interfaceRNG[i].getNext() * 1 + FrameLength + minDelay;
 							setStatus("Updating CAM table", false);
 							if(! mySwitch.CAM.exists(frame.getSource()))
 							{
@@ -451,7 +451,7 @@ public class Simulator extends JFrame implements ActionListener {
 								if(handlingMode == 2) mySwitch.ethernet[i].Tx.IdleSwitch += mySwitch.ethernet[i].Rx.buffer[0].getLength() / 4;
 								if(handlingMode == 3) mySwitch.ethernet[i].Tx.IdleSwitch += mySwitch.ethernet[i].Rx.buffer[0].getLength() / 2;
 								if(handlingMode == 4) mySwitch.ethernet[i].Tx.IdleSwitch += mySwitch.ethernet[i].Rx.buffer[0].getLength();
-								if(handlingMode == 5) mySwitch.ethernet[i].Tx.IdleSwitch += (int) handlingRng.getNext() * 1000;
+								if(handlingMode == 5) mySwitch.ethernet[i].Tx.IdleSwitch += (int) handlingRng.getNext() * 1;
 								//Drop frame from Rx
 								mySwitch.ethernet[i].Rx.pop();
 							}
@@ -467,7 +467,7 @@ public class Simulator extends JFrame implements ActionListener {
 									if(handlingMode == 2) mySwitch.ethernet[j].Tx.IdleSwitch += mySwitch.ethernet[j].Rx.buffer[0].getLength() / 4;
 									if(handlingMode == 3) mySwitch.ethernet[j].Tx.IdleSwitch += mySwitch.ethernet[j].Rx.buffer[0].getLength() / 2;
 									if(handlingMode == 4) mySwitch.ethernet[j].Tx.IdleSwitch += mySwitch.ethernet[j].Rx.buffer[0].getLength();
-									if(handlingMode == 5) mySwitch.ethernet[j].Tx.IdleSwitch += (int) handlingRng.getNext() * 1000;
+									if(handlingMode == 5) mySwitch.ethernet[j].Tx.IdleSwitch += (int) handlingRng.getNext() * 1;
 									byteCounter++;
 									
 									Integer Brd = Integer.valueOf(packetsBrd[i].getText()) + 1;
