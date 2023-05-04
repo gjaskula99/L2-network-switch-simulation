@@ -35,12 +35,12 @@ public class Simulator extends JFrame implements ActionListener {
 	Integer time = -1;
 	Boolean isRunning = false;
 	Thread thread;
-	static final Integer BUFFERSIZE = 10;
+	static final Integer BUFFERSIZE = 1000000;
 	static final Integer PORTNUMBER = 8;
 	
 	enum RNGTYPE {UNIFORM, EXP, NORMAL};
 	RNGTYPE rngSelected = RNGTYPE.EXP;
-	Exponential handlingRng = new Exponential(10.0);
+	Exponential handlingRng = new Exponential(0.001);
 	Uniform lengthRng = new Uniform();
 	
 	double TotalLost = 0.0;
@@ -348,7 +348,7 @@ public class Simulator extends JFrame implements ActionListener {
 			if(rngSelected == RNGTYPE.UNIFORM)
 				for(Integer i = 0; i < PORTNUMBER; i++) interfaceRNG[i] = new Uniform();
 			if(rngSelected == RNGTYPE.EXP)
-				for(Integer i = 0; i < PORTNUMBER; i++) interfaceRNG[i] = new Exponential(1.0);
+				for(Integer i = 0; i < PORTNUMBER; i++) interfaceRNG[i] = new Exponential(0.001);
 			if(rngSelected == RNGTYPE.NORMAL)
 				for(Integer i = 0; i < PORTNUMBER; i++) interfaceRNG[i] = new Normal();
 			
@@ -361,173 +361,57 @@ public class Simulator extends JFrame implements ActionListener {
 			progressBar.setMaximum(time);
 			LocalDateTime then = LocalDateTime.now();
 			Integer oldProgress = 0;
+			int iterations = 0;
 			while (true) //SIMULATION START
 			{
 				if (ChronoUnit.SECONDS.between(then, LocalDateTime.now()) >= time) break;
 				progressBar.setValue((int) ChronoUnit.SECONDS.between(then, LocalDateTime.now()));
-				//ACTUAL SWITCH
-				for(Integer i = 0; i < PORTNUMBER; i++) //RX
+				
+				if(mySwitch.ethernet[0].Rx.Idle <= 0) //Generate new frame
 				{
-					if(mySwitch.ethernet[i].isDown()) continue;
-					Integer byteCounter = 0; //How many bytes interface has received
-					while(byteCounter < 5120)
+					setStatus("Generating new frame from interface " + 0 + " to interface " + 1, false);
+					Integer length = 64;
+					if(!frameFixedSize) length = 64 * (int) (lengthRng.getNext() * 24 + 1);
+					Frame frame = new Frame(length, 0, 1, 1, 1);
+					if(!mySwitch.ethernet[0].Rx.isFull()) //Frame received
 					{
-						/*mySwitch.ethernet[2].Rx.push(new traffic.Frame(69, 2, 1, 3, 7));
-						mySwitch.ethernet[2].Rx.push(new traffic.Frame(0, 2, 1));
-						mySwitch.CAM.push(new l2.MAC(2, 3), 2);*/
-						if(mySwitch.ethernet[i].Rx.Idle == 0) //Generate new frame
-						{
-							Boolean targetHostUp = false;
-							Boolean broadcast = false;
-							int targetHost = -1;
-							while(!targetHostUp)
-							{
-								targetHost = (int) (targetPortRNG.getNext() * 8.1);
-								if(targetHost > PORTNUMBER - 1)
-								{
-									broadcast = true;
-									break;
-								}
-								if(mySwitch.ethernet[targetHost].isUp() && targetHost != i) targetHostUp = true;
-							}
-							
-							setStatus("Generating new frame from interface " + i + " to interface " + Integer.toString(targetHost), false);
-							Integer length = 64;
-							if(!frameFixedSize) length = 64 * (int) (lengthRng.getNext() * 24 + 1);
-							Frame frame = new Frame(length, i, targetHost, 1, 1);
-							dataIn += length;
-							if(broadcast) frame = new Frame(length, i, 1); //Broadcast
-							if(!mySwitch.ethernet[i].Rx.isFull()) //Frame received
-							{
-								mySwitch.ethernet[i].Rx.push(frame);
-								Integer Rx = Integer.valueOf(packetsRx[i].getText()) + 1;
-								packetsRx[i].setText( Integer.toString(Rx) );
-							}
-							else //Buffer is full - frame lost
-							{
-								Integer Lst = Integer.valueOf(packetsLst[i].getText()) + 1;
-								packetsLst[i].setText( Integer.toString(Lst) );
-							}
-							mySwitch.ethernet[i].Rx.Idle = (int) interfaceRNG[i].getNext() * 1000 + FrameLength + minDelay;
-							setStatus("Updating CAM table", false);
-							if(! mySwitch.CAM.exists(frame.getSource()))
-							{
-								mySwitch.CAM.push(frame.getSource(), Character.getNumericValue( frame.getSource().getInterface() ));
-							}
-							else
-							{
-								mySwitch.CAM.isAlive(frame.getSource());
-							}
-							if(! mySwitch.CAM.exists(frame.getDestination())) //If destination MAC unknown set frame to broadcast
-							{
-								frame.setBroadcast();
-							}
-						}
-						mySwitch.ethernet[i].Rx.Idle--;
-						byteCounter++;
-						if(mySwitch.ethernet[i].Rx.isEmpty()) picPort[i].setIcon(portON);
-						else picPort[i].setIcon(portTRX);
+						mySwitch.ethernet[0].Rx.push(frame);
+						Integer Rx = Integer.valueOf(packetsRx[0].getText()) + 1;
+						packetsRx[0].setText( Integer.toString(Rx) );
 					}
+					else //Buffer is full - frame lost
+					{
+						Integer Lst = Integer.valueOf(packetsLst[0].getText()) + 1;
+						packetsLst[0].setText( Integer.toString(Lst) );
+					}
+					mySwitch.ethernet[0].Rx.Idle = (int) interfaceRNG[0].getNext() * 1 + FrameLength + minDelay;
 				}
-				for(Integer i = 0; i < PORTNUMBER; i++) //SWITCHING
+				
+				if(mySwitch.ethernet[1].Tx.IdleSwitch <= 0
+						&& !mySwitch.ethernet[0].Rx.isEmpty()
+						&& mySwitch.ethernet[1].Tx.getCurrentSize() < mySwitch.ethernet[1].Tx.getSize())
 				{
-					if(mySwitch.ethernet[i].isDown()) continue;
-					Integer byteCounter = 0; //How many bytes interface has switched
-					while(byteCounter < 5120)
-					{
-						//Push new frame if ready, Tx is free and Rx not empty
-						if(mySwitch.ethernet[i].Tx.IdleSwitch <= 0
-								&& !mySwitch.ethernet[i].Rx.isEmpty()
-								&& !mySwitch.ethernet[i].Tx.isFull())
-						{
-							if(mySwitch.ethernet[i].Rx.buffer[0].getBroadcast() == false)
-							{
-								int targetInterface = Character.getNumericValue(mySwitch.ethernet[i].Rx.buffer[0].getDestination().getInterface());
-								mySwitch.ethernet[targetInterface].Tx.push( mySwitch.ethernet[i].Rx.buffer[0] );
-								mySwitch.ethernet[targetInterface].Tx.IdleSwitch = mySwitch.ethernet[i].Rx.buffer[0].getLength();
-								setStatus("Switching frame from interface " + mySwitch.ethernet[i].Rx.buffer[0].getSource().getInterface() + " to " + targetInterface, false);
-								//Add handling time
-								if(handlingMode == 1) mySwitch.ethernet[i].Tx.IdleSwitch += mySwitch.ethernet[i].Rx.buffer[0].getLength() / 10;
-								if(handlingMode == 2) mySwitch.ethernet[i].Tx.IdleSwitch += mySwitch.ethernet[i].Rx.buffer[0].getLength() / 4;
-								if(handlingMode == 3) mySwitch.ethernet[i].Tx.IdleSwitch += mySwitch.ethernet[i].Rx.buffer[0].getLength() / 2;
-								if(handlingMode == 4) mySwitch.ethernet[i].Tx.IdleSwitch += mySwitch.ethernet[i].Rx.buffer[0].getLength();
-								if(handlingMode == 5) mySwitch.ethernet[i].Tx.IdleSwitch += (int) handlingRng.getNext() * 1000;
-								//Drop frame from Rx
-								mySwitch.ethernet[i].Rx.pop();
-							}
-							else
-							{
-								for(Integer j = 0; j < PORTNUMBER; j++) //Push broadcast to all active interfaces
-								{
-									if(mySwitch.ethernet[j].isDown() || i == j) continue;
-									mySwitch.ethernet[j].Tx.push( mySwitch.ethernet[i].Rx.buffer[0] );
-									mySwitch.ethernet[j].Tx.IdleSwitch = mySwitch.ethernet[i].Rx.buffer[0].getLength();
-									setStatus("Switching frame from interface " + mySwitch.ethernet[i].Rx.buffer[0].getSource().getInterface() + " to broadcast", false);
-									//Add handling time
-									if(handlingMode == 1) mySwitch.ethernet[j].Tx.IdleSwitch += mySwitch.ethernet[j].Rx.buffer[0].getLength() / 10;
-									if(handlingMode == 2) mySwitch.ethernet[j].Tx.IdleSwitch += mySwitch.ethernet[j].Rx.buffer[0].getLength() / 4;
-									if(handlingMode == 3) mySwitch.ethernet[j].Tx.IdleSwitch += mySwitch.ethernet[j].Rx.buffer[0].getLength() / 2;
-									if(handlingMode == 4) mySwitch.ethernet[j].Tx.IdleSwitch += mySwitch.ethernet[j].Rx.buffer[0].getLength();
-									if(handlingMode == 5) mySwitch.ethernet[j].Tx.IdleSwitch += (int) handlingRng.getNext() * 1000;
-									byteCounter++;
-									
-									Integer Brd = Integer.valueOf(packetsBrd[i].getText()) + 1;
-									packetsBrd[i].setText( Integer.toString(Brd) );
-								}
-								//Drop frame from Rx
-								mySwitch.ethernet[i].Rx.pop();
-							}
-						}
-						mySwitch.ethernet[i].Tx.IdleSwitch--;
-						byteCounter++;
-					}
+					mySwitch.ethernet[1].Tx.push( mySwitch.ethernet[0].Rx.buffer[0] );
+					mySwitch.ethernet[1].Tx.IdleSwitch = mySwitch.ethernet[0].Rx.buffer[0].getLength();
+					if(handlingMode == 5) mySwitch.ethernet[1].Tx.IdleSwitch += (int) handlingRng.getNext() * 1;
+					setStatus("Switching frame from interface " + mySwitch.ethernet[0].Rx.buffer[0].getSource().getInterface() + " to " + 1, false);
+					mySwitch.ethernet[0].Rx.pop();
 				}
-				for(Integer i = 0; i < PORTNUMBER; i++) //TX
+				
+				if(mySwitch.ethernet[1].Tx.Idle <= 0
+						&& !mySwitch.ethernet[1].Tx.isEmpty())
 				{
-					if(mySwitch.ethernet[i].isDown()) continue;
-					Integer byteCounter = 0; //How many bytes interface has transmitted
-					while(byteCounter < 5120)
-					{
-						if(mySwitch.ethernet[i].Tx.Idle <= 0
-								&& !mySwitch.ethernet[i].Tx.isEmpty())
-						{
-							setStatus("Transmitting frame from interface " + mySwitch.ethernet[i].Tx.buffer[0].getSource().getInterface() + " to " + mySwitch.ethernet[i].Tx.buffer[0].getDestination().getInterface(), false);
-							dataOut += mySwitch.ethernet[i].Tx.buffer[0].getLength();
-							mySwitch.ethernet[i].Tx.Idle = mySwitch.ethernet[i].Tx.buffer[0].getLength();
-							mySwitch.ethernet[i].Tx.pop();
-							picPort[i].setIcon(portTRX);
-							Integer Tx = Integer.valueOf(packetsTx[i].getText()) + 1;
-							packetsTx[i].setText( Integer.toString(Tx) );
-						}
-						else picPort[i].setIcon(portON);
-						mySwitch.ethernet[i].Tx.Idle--;
-						byteCounter++;
-					}
+					setStatus("Transmitting frame from interface " + mySwitch.ethernet[1].Tx.buffer[0].getSource().getInterface() + " to " + mySwitch.ethernet[1].Tx.buffer[0].getDestination().getInterface(), false);
+					mySwitch.ethernet[1].Tx.Idle = mySwitch.ethernet[1].Tx.buffer[0].getLength();
+					mySwitch.ethernet[1].Tx.pop();
+					Integer Tx = Integer.valueOf(packetsTx[1].getText()) + 1;
+					packetsTx[1].setText( Integer.toString(Tx) );
 				}
-				//Validate CAM table
-				mySwitch.CAM.decrement();
-				mySwitch.CAM.validate();
-				//Update GUI and print status every second
-				if(oldProgress != progressBar.getValue())
-				{
-					oldProgress = progressBar.getValue();
-					CAM.setText(mySwitch.CAM.listTable());
-					
-					double sumLst = 0.0;
-					double sumTotal = 0.0;
-					for(Integer i = 0; i < PORTNUMBER; i++)
-					{
-						sumLst += Integer.valueOf(packetsLst[i].getText());
-						sumTotal += Integer.valueOf(packetsRx[i].getText());
-					}
-					Double losts = (sumLst / sumTotal) * 100;
-					if(losts > 100) losts = 100.0;
-					packetsLstTotal.setText( "Total lost: " + Double.toString(losts) + "%");
-					dataInbound.setText( "Data in: " + Double.toString(dataIn / 1024 / 1024) + " Mb");
-					dataServed.setText( "Data served: " + Double.toString(dataOut / 1024 / 1024) + " Mb");
-					Buffer.setText("Rx (" + mySwitch.ethernet[BufferSelect.getSelectedIndex()].Rx.getCurrentSize() + "):\n"+ mySwitch.ethernet[BufferSelect.getSelectedIndex() ].Rx.getString() 
-						+ "\nTx (" + mySwitch.ethernet[BufferSelect.getSelectedIndex()].Tx.getCurrentSize() + "):\n" + mySwitch.ethernet[ BufferSelect.getSelectedIndex() ].Tx.getString() );
-				}
+				
+				mySwitch.ethernet[0].Rx.Idle--;
+				mySwitch.ethernet[1].Tx.IdleSwitch--;
+				mySwitch.ethernet[1].Tx.Idle--;
+				iterations++;
 			} //SIMULATION END
 			isRunning = false;
 			
@@ -561,6 +445,7 @@ public class Simulator extends JFrame implements ActionListener {
 			dataServed.setText( "Data served: " + Double.toString(DataOutVal) + " Mb");
 			Buffer.setText("Rx (" + mySwitch.ethernet[BufferSelect.getSelectedIndex()].Rx.getCurrentSize() + "):\n"+ mySwitch.ethernet[BufferSelect.getSelectedIndex() ].Rx.getString() 
 				+ "\nTx (" + mySwitch.ethernet[BufferSelect.getSelectedIndex()].Tx.getCurrentSize() + "):\n" + mySwitch.ethernet[ BufferSelect.getSelectedIndex() ].Tx.getString() );
+			System.out.print("ITERATIONS:" + iterations);
 			this.interrupt();
 		}
 	}
