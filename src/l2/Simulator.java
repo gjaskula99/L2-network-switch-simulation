@@ -35,14 +35,14 @@ public class Simulator extends JFrame implements ActionListener {
 	Integer time = -1;
 	Boolean isRunning = false;
 	Thread thread;
-	static final Integer BUFFERSIZE = 1000000;
+	static final Integer BUFFERSIZE = 10;
 	static final Integer PORTNUMBER = 8;
 	
-	Integer[] bufferLength = new Integer[1000000];
+	Integer[] bufferLength = new Integer[BUFFERSIZE + 1];
 	
 	enum RNGTYPE {UNIFORM, EXP, NORMAL};
 	RNGTYPE rngSelected = RNGTYPE.EXP;
-	Exponential handlingRng = new Exponential(2.0);
+	Exponential handlingRng = new Exponential(4.0);
 	Uniform lengthRng = new Uniform();
 	
 	double TotalLost = 0.0;
@@ -350,7 +350,7 @@ public class Simulator extends JFrame implements ActionListener {
 			if(rngSelected == RNGTYPE.UNIFORM)
 				for(Integer i = 0; i < PORTNUMBER; i++) interfaceRNG[i] = new Uniform();
 			if(rngSelected == RNGTYPE.EXP)
-				for(Integer i = 0; i < PORTNUMBER; i++) interfaceRNG[i] = new Exponential(1.0);
+				for(Integer i = 0; i < PORTNUMBER; i++) interfaceRNG[i] = new Exponential(2.0);
 			if(rngSelected == RNGTYPE.NORMAL)
 				for(Integer i = 0; i < PORTNUMBER; i++) interfaceRNG[i] = new Normal();
 			
@@ -365,7 +365,7 @@ public class Simulator extends JFrame implements ActionListener {
 			Integer oldProgress = 0;
 			int iterations = 0;
 			
-			for(int i = 0; i < BUFFERSIZE; i++) bufferLength[i] = 0;
+			for(int i = 0; i < BUFFERSIZE + 1; i++) bufferLength[i] = 0;
 			
 			while (true) //SIMULATION START
 			{
@@ -386,10 +386,11 @@ public class Simulator extends JFrame implements ActionListener {
 					}
 					else //Buffer is full - frame lost
 					{
-						Integer Lst = Integer.valueOf(packetsLst[0].getText()) + 1;
-						packetsLst[0].setText( Integer.toString(Lst) );
+						//Integer Lst = Integer.valueOf(packetsLst[0].getText()) + 1;
+						//packetsLst[0].setText( Integer.toString(Lst) );
 					}
 					mySwitch.ethernet[0].Rx.Idle = (int) interfaceRNG[0].getNext() * 1 + FrameLength + minDelay;
+					if(mySwitch.ethernet[0].Rx.getCurrentSize() == 1) mySwitch.ethernet[1].Tx.IdleSwitch += (FrameLength / 10);
 				}
 				bufferLength[ mySwitch.ethernet[0].Rx.getCurrentSize() ]++;
 				
@@ -451,11 +452,14 @@ public class Simulator extends JFrame implements ActionListener {
 			dataServed.setText( "Data served: " + Double.toString(DataOutVal) + " Mb");
 			Buffer.setText("Rx (" + mySwitch.ethernet[BufferSelect.getSelectedIndex()].Rx.getCurrentSize() + "):\n"+ mySwitch.ethernet[BufferSelect.getSelectedIndex() ].Rx.getString() 
 				+ "\nTx (" + mySwitch.ethernet[BufferSelect.getSelectedIndex()].Tx.getCurrentSize() + "):\n" + mySwitch.ethernet[ BufferSelect.getSelectedIndex() ].Tx.getString() );
-			System.out.print("ITERATIONS:" + iterations + "\n");
+			System.out.print("ITERATIONS: " + iterations + "\n");
 			
 			double bufferAvg = 0;
-			for(int i = 0; i < BUFFERSIZE; i++) bufferAvg += (bufferLength[i] * i);
-			System.out.print("BUFFER TOTAL:" + bufferAvg + "\n");
+			for(int i = 0; i < BUFFERSIZE + 1; i++)
+			{
+				System.out.print(bufferLength[i] + "" + bufferLength[i] * i + "\n");
+				bufferAvg += (bufferLength[i] * i);
+			}
 			System.out.print(bufferAvg / iterations + "\n");
 			
 			this.interrupt();
