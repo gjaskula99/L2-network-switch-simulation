@@ -35,7 +35,7 @@ public class Simulator extends JFrame implements ActionListener {
 	Integer time = -1;
 	Boolean isRunning = false;
 	Thread thread;
-	static final Integer BUFFERSIZE = 10;
+	static final Integer BUFFERSIZE = 1000000;
 	static final Integer PORTNUMBER = 8;
 	
 	Integer[] bufferLength = new Integer[BUFFERSIZE + 1];
@@ -43,7 +43,8 @@ public class Simulator extends JFrame implements ActionListener {
 	enum RNGTYPE {UNIFORM, EXP, NORMAL};
 	RNGTYPE rngSelected = RNGTYPE.EXP;
 	Exponential handlingRng = new Exponential(4.0);
-	Uniform lengthRng = new Uniform();
+	//Uniform lengthRng = new Uniform();
+	Exponential lengthRng = new Exponential(4.0);
 	
 	double TotalLost = 0.0;
 	double DataInVal = 0.0;
@@ -160,6 +161,7 @@ public class Simulator extends JFrame implements ActionListener {
 		handling.setBounds(1020, 210, 170, 20);
 		handling.setSelectedIndex(0);
 		handling.addActionListener(this);
+		handling.setSelectedIndex(5);
 		handlingTxt.setBounds(1020, 190, 170, 20);
 		handlingTxt.setText("Frame handle time");
 		
@@ -177,6 +179,7 @@ public class Simulator extends JFrame implements ActionListener {
 			ethernet[i].setText("eth" + i);
 			ethernet[i].setBounds(100 + (100*i), 200, 90, 30);
 			ethernet[i].addActionListener(this);
+			ethernet[i].setSelected(true);
 			window.add(ethernet[i]);
 			
 			//Stats
@@ -364,6 +367,7 @@ public class Simulator extends JFrame implements ActionListener {
 			LocalDateTime then = LocalDateTime.now();
 			Integer oldProgress = 0;
 			int iterations = 0;
+			Uniform targetRNG = new Uniform();
 			
 			for(int i = 0; i < BUFFERSIZE + 1; i++) bufferLength[i] = 0;
 			
@@ -372,52 +376,76 @@ public class Simulator extends JFrame implements ActionListener {
 				if (ChronoUnit.SECONDS.between(then, LocalDateTime.now()) >= time) break;
 				progressBar.setValue((int) ChronoUnit.SECONDS.between(then, LocalDateTime.now()));
 				
-				if(mySwitch.ethernet[0].Rx.Idle <= 0) //Generate new frame
+				for(int i = 0; i <= 3; i++)
 				{
-					setStatus("Generating new frame from interface " + 0 + " to interface " + 1, false);
-					Integer length = 64;
-					if(!frameFixedSize) length = 64 * (int) (lengthRng.getNext() * 24 + 1);
-					Frame frame = new Frame(length, 0, 1, 1, 1);
-					if(!mySwitch.ethernet[0].Rx.isFull()) //Frame received
+					Integer destInter = (int) (Math.random() * (8 - 4) + 4);
+					
+					if(mySwitch.ethernet[i].Rx.Idle <= 0) //Generate new frame
 					{
-						mySwitch.ethernet[0].Rx.push(frame);
-						Integer Rx = Integer.valueOf(packetsRx[0].getText()) + 1;
-						packetsRx[0].setText( Integer.toString(Rx) );
+						setStatus("Generating new frame from interface " + i + " to interface " + destInter, false);
+						Integer length = 64;
+						if(!frameFixedSize) length = 64 * (int) (lengthRng.getNext() * 24 + 1);
+						Frame frame = new Frame(length, i, destInter, 1, 1);
+						if(!mySwitch.ethernet[i].Rx.isFull()) //Frame received
+						{
+							mySwitch.ethernet[i].Rx.push(frame);
+							Integer Rx = Integer.valueOf(packetsRx[i].getText()) + 1;
+							packetsRx[i].setText( Integer.toString(Rx) );
+						}
+						else //Buffer is full - frame lost
+						{
+							//Integer Lst = Integer.valueOf(packetsLst[0].getText()) + 1;
+							//packetsLst[0].setText( Integer.toString(Lst) );
+						}
+						mySwitch.ethernet[i].Rx.Idle = (int) interfaceRNG[i].getNext() * 1 + FrameLength + minDelay;
+						//if(mySwitch.ethernet[i].Rx.getCurrentSize() == 1) mySwitch.ethernet[i].Tx.IdleSwitch += (FrameLength / 62);
+						
+						Integer Tx = Integer.valueOf(packetsTx[destInter].getText()) + 1;
+						packetsTx[destInter].setText( Integer.toString(Tx) );
+						
 					}
-					else //Buffer is full - frame lost
-					{
-						//Integer Lst = Integer.valueOf(packetsLst[0].getText()) + 1;
-						//packetsLst[0].setText( Integer.toString(Lst) );
-					}
-					mySwitch.ethernet[0].Rx.Idle = (int) interfaceRNG[0].getNext() * 1 + FrameLength + minDelay;
-					if(mySwitch.ethernet[0].Rx.getCurrentSize() == 1) mySwitch.ethernet[1].Tx.IdleSwitch += (FrameLength / 10);
-				}
-				bufferLength[ mySwitch.ethernet[0].Rx.getCurrentSize() ]++;
-				
-				if(mySwitch.ethernet[1].Tx.IdleSwitch <= 0
-						&& !mySwitch.ethernet[0].Rx.isEmpty()
-						&& mySwitch.ethernet[1].Tx.getCurrentSize() < mySwitch.ethernet[1].Tx.getSize() )
-				{
-					mySwitch.ethernet[1].Tx.push( mySwitch.ethernet[0].Rx.buffer[0] );
-					mySwitch.ethernet[1].Tx.IdleSwitch = mySwitch.ethernet[0].Rx.buffer[0].getLength();
-					if(handlingMode == 5) mySwitch.ethernet[1].Tx.IdleSwitch += (int) handlingRng.getNext() * 1;
-					setStatus("Switching frame from interface " + mySwitch.ethernet[0].Rx.buffer[0].getSource().getInterface() + " to " + 1, false);
-					mySwitch.ethernet[0].Rx.pop();
 				}
 				
-				if(mySwitch.ethernet[1].Tx.Idle <= 0
-						&& !mySwitch.ethernet[1].Tx.isEmpty())
+				//bufferLength[ mySwitch.ethernet[0].Rx.getCurrentSize() ]++;
+				
+				/*Integer i = destInter;
+				for(int i = 4; i <=7 ;i++)
 				{
-					setStatus("Transmitting frame from interface " + mySwitch.ethernet[1].Tx.buffer[0].getSource().getInterface() + " to " + mySwitch.ethernet[1].Tx.buffer[0].getDestination().getInterface(), false);
-					mySwitch.ethernet[1].Tx.Idle = mySwitch.ethernet[1].Tx.buffer[0].getLength();
-					mySwitch.ethernet[1].Tx.pop();
-					Integer Tx = Integer.valueOf(packetsTx[1].getText()) + 1;
-					packetsTx[1].setText( Integer.toString(Tx) );
-				}
+					if(mySwitch.ethernet[i].Tx.IdleSwitch <= 0
+							&& !mySwitch.ethernet[0].Rx.isEmpty()
+							&& mySwitch.ethernet[i].Tx.getCurrentSize() < mySwitch.ethernet[i].Tx.getSize() )
+					{
+						if( Character.getNumericValue( mySwitch.ethernet[0].Rx.buffer[0].getDestination().getInterface()) != i) continue;
+						mySwitch.ethernet[i].Tx.push( mySwitch.ethernet[0].Rx.buffer[0] );
+						mySwitch.ethernet[i].Tx.IdleSwitch = mySwitch.ethernet[0].Rx.buffer[0].getLength();
+						if(handlingMode == 5) mySwitch.ethernet[i].Tx.IdleSwitch += (int) handlingRng.getNext() * 1;
+						//setStatus("Switching frame from interface " + mySwitch.ethernet[0].Rx.buffer[0].getSource().getInterface() + " to " + 1, false);
+						mySwitch.ethernet[0].Rx.pop();
+					}
+					
+					if(mySwitch.ethernet[i].Tx.Idle <= 0
+							&& !mySwitch.ethernet[i].Tx.isEmpty())
+					{
+						//setStatus("Transmitting frame from interface " + mySwitch.ethernet[i].Tx.buffer[0].getSource().getInterface() + " to " + mySwitch.ethernet[i].Tx.buffer[0].getDestination().getInterface(), false);
+						mySwitch.ethernet[i].Tx.Idle = mySwitch.ethernet[i].Tx.buffer[0].getLength();
+						mySwitch.ethernet[i].Tx.pop();
+						//Integer Tx = Integer.valueOf(packetsTx[destInter].getText()) + 1;
+						//packetsTx[i].setText( Integer.toString(Tx) );
+					}
+				}*/
 				
 				mySwitch.ethernet[0].Rx.Idle--;
-				mySwitch.ethernet[1].Tx.IdleSwitch--;
-				mySwitch.ethernet[1].Tx.Idle--;
+				mySwitch.ethernet[1].Rx.Idle--;
+				mySwitch.ethernet[2].Rx.Idle--;
+				mySwitch.ethernet[3].Rx.Idle--;
+				mySwitch.ethernet[4].Tx.IdleSwitch--;
+				mySwitch.ethernet[4].Tx.Idle--;
+				mySwitch.ethernet[5].Tx.IdleSwitch--;
+				mySwitch.ethernet[5].Tx.Idle--;
+				mySwitch.ethernet[6].Tx.IdleSwitch--;
+				mySwitch.ethernet[6].Tx.Idle--;
+				mySwitch.ethernet[7].Tx.IdleSwitch--;
+				mySwitch.ethernet[7].Tx.Idle--;
 				iterations++;
 			} //SIMULATION END
 			isRunning = false;
@@ -450,18 +478,18 @@ public class Simulator extends JFrame implements ActionListener {
 			packetsLstTotal.setText( "Total lost: " + Double.toString(losts) + "%");
 			dataInbound.setText( "Data in: " + Double.toString(DataInVal) + " Mb");
 			dataServed.setText( "Data served: " + Double.toString(DataOutVal) + " Mb");
-			Buffer.setText("Rx (" + mySwitch.ethernet[BufferSelect.getSelectedIndex()].Rx.getCurrentSize() + "):\n"+ mySwitch.ethernet[BufferSelect.getSelectedIndex() ].Rx.getString() 
-				+ "\nTx (" + mySwitch.ethernet[BufferSelect.getSelectedIndex()].Tx.getCurrentSize() + "):\n" + mySwitch.ethernet[ BufferSelect.getSelectedIndex() ].Tx.getString() );
+			//Buffer.setText("Rx (" + mySwitch.ethernet[BufferSelect.getSelectedIndex()].Rx.getCurrentSize() + "):\n"+ mySwitch.ethernet[BufferSelect.getSelectedIndex() ].Rx.getString() 
+			//	+ "\nTx (" + mySwitch.ethernet[BufferSelect.getSelectedIndex()].Tx.getCurrentSize() + "):\n" + mySwitch.ethernet[ BufferSelect.getSelectedIndex() ].Tx.getString() );
 			System.out.print("ITERATIONS: " + iterations + "\n");
 			
-			double bufferAvg = 0;
+			/*double bufferAvg = 0;
 			for(int i = 0; i < BUFFERSIZE + 1; i++)
 			{
 				System.out.print(bufferLength[i] + "" + bufferLength[i] * i + "\n");
-				bufferAvg += (bufferLength[i] * i);
+				bufferAvg += (bufferLength[i] / 2 * i);
 			}
 			System.out.print(bufferAvg / iterations + "\n");
-			
+			*/
 			this.interrupt();
 		}
 	}
@@ -488,11 +516,11 @@ public class Simulator extends JFrame implements ActionListener {
 				setStatus("Invalid input - must be greater than 0", true);
 				return;
 			}
-			if( mySwitch.getNumberOfActiveInterfaces() < 2 )
+			/*if( mySwitch.getNumberOfActiveInterfaces() < 2 )
 			{
 				setStatus("Cannot transmit - at least two interfaces must be up", true);
 				return;
-			}
+			}*/
 			
 			isRunning = !isRunning;
 			//Start simulator
