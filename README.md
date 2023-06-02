@@ -7,6 +7,8 @@ Poznań University of Technology, 2023
 
 **This program is for educational purposes only and is provided as it is with absolutely no warranty.**
 
+<img width="454" alt="simulator_gui" src="https://github.com/gjaskula99/L2-network-switch-simulation/assets/81091594/45a13f8f-c2dd-4cea-95ac-7b5490cbf9ff">
+
 ***
 
 ## About
