@@ -402,7 +402,7 @@ public class Simulator extends JFrame implements ActionListener {
 							Boolean broadcast = false;
 							int targetHost = -1;
 							if(broadcastRNG.getNextInt(0, 99) < broadcastTreshold) broadcast = true;
-							while(!targetHostUp)
+							else while(!targetHostUp)
 							{
 								targetHost = (targetPortRNG.getNextInt(0, 7));
 								if(mySwitch.ethernet[targetHost].isUp() && targetHost != i) targetHostUp = true;
