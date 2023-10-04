@@ -730,6 +730,7 @@ public class Simulator extends JFrame implements ActionListener {
 		frameLengthVary.setEnabled(true);
 		handling.setEnabled(true);
 		broadcast.setEnabled(true);
+		MAC_TTL.setEnabled(true);
 	}
 	
 	public void disableGUI() //Before simulation
@@ -746,6 +747,7 @@ public class Simulator extends JFrame implements ActionListener {
 		frameLengthVary.setEnabled(false);
 		handling.setEnabled(false);
 		broadcast.setEnabled(false);
+		MAC_TTL.setEnabled(false);
 	}
 	
 	public void setStatus(String msg, Boolean isError)
