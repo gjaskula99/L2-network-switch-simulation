@@ -80,6 +80,10 @@ public class Simulator extends JFrame implements ActionListener {
 	JRadioButton frameLengthVary = new JRadioButton();
 	JTextField frameMinDelay = new JTextField();
 	JLabel frameMinDelayTxt = new JLabel();
+	JTextField MAC_TTL = new JTextField();
+	JLabel MAC_TTLTxt = new JLabel();
+	JTextField broadcast = new JTextField();
+	JLabel broadcastTxt = new JLabel();
 	
 	ImageIcon switchOFF = new ImageIcon("res/switchOFF.png");
 	ImageIcon switchON = new ImageIcon("res/switchON.png");
@@ -96,7 +100,7 @@ public class Simulator extends JFrame implements ActionListener {
 	JLabel packetsRxTxt = new JLabel("Rx:");
 	JLabel packetsTxTxt = new JLabel("Tx:");
 	JLabel packetsLstTxt = new JLabel("Lost:");
-	JLabel packetsBrdTxt = new JLabel("Broadcast:");
+	JLabel packetsBrdTxt = new JLabel("Brdcst Tx:");
 	JLabel packetsLstTotal = new JLabel("Total lost: 0.0%");
 	JLabel dataInbound = new JLabel("Data in: 0 Mb");
 	JLabel dataServed = new JLabel("Data served: 0 Mb");
@@ -116,6 +120,9 @@ public class Simulator extends JFrame implements ActionListener {
 	Switch mySwitch = new Switch(BUFFERSIZE);
 	Random[] interfaceRNG = new Random[PORTNUMBER];
 	Uniform targetPortRNG = new Uniform();
+	Uniform broadcastRNG = new Uniform();
+	Integer broadcastTreshold = 5;
+	Integer MACTimeToLive = 10;
 	
 	//Constructior
 	Simulator()
@@ -123,7 +130,7 @@ public class Simulator extends JFrame implements ActionListener {
 		//Setup GUI
 		setStatus("Creating GUI", false);
 		
-		window.setBounds(EXIT_ON_CLOSE, ABORT, 1200, 800);
+		window.setBounds(EXIT_ON_CLOSE, ABORT, 1400, 800);
 		window.setLocationRelativeTo(null);
 		window.setResizable(false);
 		window.setTitle("L2 network switch simulator");
@@ -215,15 +222,20 @@ public class Simulator extends JFrame implements ActionListener {
 		
 		switchingMode.add(switchingMode_SF);
 		switchingMode.add(switchingMode_CT);
-		switchingModeTxt.setBounds(950, 300, 200, 20);
+		switchingModeTxt.setBounds(950, 300, 150, 20);
 		switchingModeTxt.setText("Switching mode");
-		switchingMode_SF.setBounds(950, 330, 200, 20);
+		switchingMode_SF.setBounds(950, 330, 150, 20);
 		switchingMode_SF.setText("Store and forward");
 		switchingMode_SF.setSelected(true);
 		switchingMode_SF.setEnabled(false); //TODO
-		switchingMode_CT.setBounds(950, 350, 200, 20);
+		switchingMode_CT.setBounds(950, 350, 150, 20);
 		switchingMode_CT.setText("Cut through");
 		switchingMode_CT.setEnabled(false); //TODO
+		
+		broadcast.setBounds(1100, 330, 50, 20);
+		broadcast.setText(Integer.toString(broadcastTreshold));
+		broadcastTxt.setBounds(1100, 300, 150, 20);
+		broadcastTxt.setText("% of broadcast traffic");
 		
 		frameLength.add(frameLengthFixed);
 		frameLength.add(frameLengthVary);
@@ -237,10 +249,15 @@ public class Simulator extends JFrame implements ActionListener {
 		frameLengthVary.setText("64B - 1536B");
 		frameLengthVary.addActionListener(this);
 		
-		frameMinDelay.setBounds(950, 520, 200, 20);
+		frameMinDelay.setBounds(950, 520, 50, 20);
 		frameMinDelay.setText(String.valueOf(0));
 		frameMinDelayTxt.setBounds(950, 500, 200, 20);
 		frameMinDelayTxt.setText("Minimal delay between frames");
+		
+		MAC_TTL.setBounds(1150, 520, 50, 20);
+		MAC_TTL.setText(Integer.toString(MACTimeToLive));
+		MAC_TTLTxt.setBounds(1150, 500, 200, 20);
+		MAC_TTLTxt.setText("CAM table entry TimeToLive");
 		
 		picSwitch.setBounds(53, 50, 947, 150);
 		for(Integer i = 0; i < PORTNUMBER; i++)
@@ -304,11 +321,15 @@ public class Simulator extends JFrame implements ActionListener {
 		window.add(switchingModeTxt);
 		window.add(switchingMode_SF);
 		window.add(switchingMode_CT);
+		window.add(broadcast);
+		window.add(broadcastTxt);
 		window.add(frameLengthTxt);
 		window.add(frameLengthFixed);
 		window.add(frameLengthVary);
 		window.add(frameMinDelay);
 		window.add(frameMinDelayTxt);
+		window.add(MAC_TTL);
+		window.add(MAC_TTLTxt);
 		
 		window.add(picSwitch);
 		
@@ -380,14 +401,10 @@ public class Simulator extends JFrame implements ActionListener {
 							Boolean targetHostUp = false;
 							Boolean broadcast = false;
 							int targetHost = -1;
+							if(broadcastRNG.getNextInt(0, 99) < broadcastTreshold) broadcast = true;
 							while(!targetHostUp)
 							{
-								targetHost = (int) (targetPortRNG.getNextInt(0, 8));
-								if(targetHost > PORTNUMBER - 1)
-								{
-									broadcast = true;
-									break;
-								}
+								targetHost = (targetPortRNG.getNextInt(0, 7));
 								if(mySwitch.ethernet[targetHost].isUp() && targetHost != i) targetHostUp = true;
 							}
 							
@@ -408,7 +425,7 @@ public class Simulator extends JFrame implements ActionListener {
 								Integer Lst = Integer.valueOf(packetsLst[i].getText()) + 1;
 								packetsLst[i].setText( Integer.toString(Lst) );
 							}
-							mySwitch.ethernet[i].Rx.Idle = (int) interfaceRNG[i].getNext() * 1 + FrameLength + minDelay;
+							mySwitch.ethernet[i].Rx.Idle = (int) interfaceRNG[i].getNext() + FrameLength + minDelay;
 							setStatus("Updating CAM table", false);
 							if(! mySwitch.CAM.exists(frame.getSource()))
 							{
@@ -470,9 +487,10 @@ public class Simulator extends JFrame implements ActionListener {
 									if(handlingMode == 5) mySwitch.ethernet[j].Tx.IdleSwitch += (int) handlingRng.getNext() * 1;
 									byteCounter++;
 									
-									Integer Brd = Integer.valueOf(packetsBrd[i].getText()) + 1;
-									packetsBrd[i].setText( Integer.toString(Brd) );
+									
 								}
+								Integer Brd = Integer.valueOf(packetsBrd[i].getText()) + 1;
+								packetsBrd[i].setText( Integer.toString(Brd) );
 								//Drop frame from Rx
 								mySwitch.ethernet[i].Rx.pop();
 							}
@@ -574,14 +592,21 @@ public class Simulator extends JFrame implements ActionListener {
 			try {
 		        d = Double.parseDouble( String.valueOf(iterations.getText()) );
 		        d2 = Double.parseDouble( String.valueOf(frameMinDelay.getText()) );
+		        broadcastTreshold = Integer.parseInt( broadcast.getText() );
+		        MACTimeToLive = Integer.parseInt(MAC_TTL.getText());
 		    } 
 			catch (NumberFormatException nfe) {
 				setStatus("Invalid input - not a number", true);
 		        return;
 		    }
-			if( d <= 0 || d2 < 0)
+			if( d <= 0 || d2 < 0 || MACTimeToLive < 0)
 			{
 				setStatus("Invalid input - must be greater than 0", true);
+				return;
+			}
+			if(broadcastTreshold > 100 || broadcastTreshold < 0)
+			{
+				setStatus("Invalid input - broadcast treshold must be % (0-100)", true);
 				return;
 			}
 			if( mySwitch.getNumberOfActiveInterfaces() < 2 )
@@ -590,6 +615,7 @@ public class Simulator extends JFrame implements ActionListener {
 				return;
 			}
 			
+			mySwitch.CAM.setDefaultValidity(MACTimeToLive);
 			isRunning = !isRunning;
 			//Start simulator
 			Task progress = new Task();
@@ -703,6 +729,7 @@ public class Simulator extends JFrame implements ActionListener {
 		frameLengthFixed.setEnabled(true);
 		frameLengthVary.setEnabled(true);
 		handling.setEnabled(true);
+		broadcast.setEnabled(true);
 	}
 	
 	public void disableGUI() //Before simulation
@@ -718,6 +745,7 @@ public class Simulator extends JFrame implements ActionListener {
 		frameLengthFixed.setEnabled(false);
 		frameLengthVary.setEnabled(false);
 		handling.setEnabled(false);
+		broadcast.setEnabled(false);
 	}
 	
 	public void setStatus(String msg, Boolean isError)

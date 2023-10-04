@@ -9,8 +9,8 @@ public class Uniform extends Random{
 	{
 		return Math.random();
 	}
-	public int getNextInt(int min, int max)
+	public int getNextInt(int Min, int Max)
 	{
-	    return (int) ((Math.random() * (max - min)) + min);
+		return Min + (int)(Math.random() * ((Max - Min) + 1));
 	}
 }

@@ -93,4 +93,8 @@ public class MACTable {
 		this.interf.clear();
 		this.validFor.clear();
 	}
+	public void setDefaultValidity(Integer newVal)
+	{
+		this.defaultValidity = newVal;
+	}
 }
