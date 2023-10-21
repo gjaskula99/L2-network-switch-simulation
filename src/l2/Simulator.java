@@ -63,8 +63,10 @@ public class Simulator extends JFrame implements ActionListener {
 	JComboBox<String> rngType = new JComboBox<String>(rngTypeString);
 	JLabel rngTypeTxt = new JLabel();
 	String[] handlingString = {"Instant", "10% of frame length", "25% of frame length", "50% of frame length" , "100% of frame length" , "Exponential"};
-	JComboBox<String> handling = new JComboBox<String>(handlingString);
-	JLabel handlingTxt = new JLabel();
+	JTextField rngParam1 = new JTextField();
+	JTextField rngParam2 = new JTextField();
+	JLabel rngParamsTxt = new JLabel();
+	
 	JProgressBar progressBar = new JProgressBar();
 	
 	JCheckBox[] ethernet = new JCheckBox[8];
@@ -80,6 +82,8 @@ public class Simulator extends JFrame implements ActionListener {
 	JRadioButton frameLengthVary = new JRadioButton();
 	JTextField frameMinDelay = new JTextField();
 	JLabel frameMinDelayTxt = new JLabel();
+	JComboBox<String> handling = new JComboBox<String>(handlingString);
+	JLabel handlingTxt = new JLabel();
 	JTextField MAC_TTL = new JTextField();
 	JLabel MAC_TTLTxt = new JLabel();
 	JTextField broadcast = new JTextField();
@@ -124,13 +128,16 @@ public class Simulator extends JFrame implements ActionListener {
 	Integer broadcastTreshold = 5;
 	Integer MACTimeToLive = 10;
 	
+	Double generatorParam1 = 0.0;
+	Double generatorParam2 = 0.0;
+	
 	//Constructior
 	Simulator()
 	{
 		//Setup GUI
 		setStatus("Creating GUI", false);
 		
-		window.setBounds(EXIT_ON_CLOSE, ABORT, 1400, 800);
+		window.setBounds(EXIT_ON_CLOSE, ABORT, 1300, 800);
 		window.setLocationRelativeTo(null);
 		window.setResizable(false);
 		window.setTitle("L2 network switch simulator");
@@ -162,11 +169,15 @@ public class Simulator extends JFrame implements ActionListener {
 		rngTypeTxt.setBounds(1020, 150, 170, 20);
 		rngTypeTxt.setText("Traffic generator type");
 		
-		handling.setBounds(1020, 210, 170, 20);
-		handling.setSelectedIndex(0);
-		handling.addActionListener(this);
-		handlingTxt.setBounds(1020, 190, 170, 20);
-		handlingTxt.setText("Frame handle time");
+		rngParam1.setBounds(1020, 220, 100, 20);
+		rngParam1.setText("Lambda");
+		rngParam1.addActionListener(this);
+		rngParam2.setBounds(1150, 220, 100, 20);
+		rngParam2.setEnabled(false);
+		rngParam2.setText("N/A");
+		rngParam2.addActionListener(this);
+		rngParamsTxt.setBounds(1020, 200, 200, 20);
+		rngParamsTxt.setText("RNG parameters");
 		
 		progressBar.setBounds(1000, 10, 180, 20);
 		progressBar.setMinimum(0);
@@ -214,7 +225,7 @@ public class Simulator extends JFrame implements ActionListener {
 		dataInbound.setFont(new Font("Serif", Font.BOLD, 20));
 		dataServed.setFont(new Font("Serif", Font.BOLD, 20));
 		packetsLstTotal.setForeground(Color.RED);
-		bufferSize.setBounds(1050, 250, 100, 30);
+		bufferSize.setBounds(1020, 250, 100, 30);
 		bufferSize.setText(Integer.toString(BUFFERSIZE));
 		bufferSize.setEnabled(false);
 		bufferSizeTxt.setBounds(950, 250, 90, 30);
@@ -249,6 +260,12 @@ public class Simulator extends JFrame implements ActionListener {
 		frameLengthVary.setText("64B - 1536B");
 		frameLengthVary.addActionListener(this);
 		
+		handling.setBounds(1100, 430, 150, 20);
+		handling.setSelectedIndex(0);
+		handling.addActionListener(this);
+		handlingTxt.setBounds(1100, 400, 150, 20);
+		handlingTxt.setText("Frame handle time");
+		
 		frameMinDelay.setBounds(950, 520, 50, 20);
 		frameMinDelay.setText(String.valueOf(0));
 		frameMinDelayTxt.setBounds(950, 500, 200, 20);
@@ -257,7 +274,7 @@ public class Simulator extends JFrame implements ActionListener {
 		MAC_TTL.setBounds(1150, 520, 50, 20);
 		MAC_TTL.setText(Integer.toString(MACTimeToLive));
 		MAC_TTLTxt.setBounds(1150, 500, 200, 20);
-		MAC_TTLTxt.setText("CAM table entry TimeToLive");
+		MAC_TTLTxt.setText("CAM table entry TTL");
 		
 		picSwitch.setBounds(53, 50, 947, 150);
 		for(Integer i = 0; i < PORTNUMBER; i++)
@@ -303,8 +320,9 @@ public class Simulator extends JFrame implements ActionListener {
 		window.add(status);
 		window.add(rngType);
 		window.add(rngTypeTxt);
-		window.add(handling);
-		window.add(handlingTxt);
+		window.add(rngParam1);
+		window.add(rngParam2);
+		window.add(rngParamsTxt);
 		window.add(progressBar);
 		window.add(copy);
 		
@@ -326,6 +344,8 @@ public class Simulator extends JFrame implements ActionListener {
 		window.add(frameLengthTxt);
 		window.add(frameLengthFixed);
 		window.add(frameLengthVary);
+		window.add(handling);
+		window.add(handlingTxt);
 		window.add(frameMinDelay);
 		window.add(frameMinDelayTxt);
 		window.add(MAC_TTL);
@@ -369,7 +389,7 @@ public class Simulator extends JFrame implements ActionListener {
 			if(rngSelected == RNGTYPE.UNIFORM)
 				for(Integer i = 0; i < PORTNUMBER; i++) interfaceRNG[i] = new Uniform();
 			if(rngSelected == RNGTYPE.EXP)
-				for(Integer i = 0; i < PORTNUMBER; i++) interfaceRNG[i] = new Exponential(0.001);
+				for(Integer i = 0; i < PORTNUMBER; i++) interfaceRNG[i] = new Exponential(generatorParam1);
 			if(rngSelected == RNGTYPE.NORMAL)
 				for(Integer i = 0; i < PORTNUMBER; i++) interfaceRNG[i] = new Normal();
 			
@@ -594,6 +614,11 @@ public class Simulator extends JFrame implements ActionListener {
 		        d2 = Double.parseDouble( String.valueOf(frameMinDelay.getText()) );
 		        broadcastTreshold = Integer.parseInt( broadcast.getText() );
 		        MACTimeToLive = Integer.parseInt(MAC_TTL.getText());
+		        generatorParam1 = Double.parseDouble(rngParam1.getText());
+		        if(rngSelected != RNGTYPE.EXP)
+		        {
+		        	generatorParam2 = Double.parseDouble(rngParam2.getText());
+		        }
 		    } 
 			catch (NumberFormatException nfe) {
 				setStatus("Invalid input - not a number", true);
@@ -665,16 +690,25 @@ public class Simulator extends JFrame implements ActionListener {
 			{
 				rngSelected = RNGTYPE.UNIFORM;
 				setStatus("Random number generator switched to uniform distribution", false);
+				rngParam1.setText("Min");
+				rngParam2.setEnabled(true);
+				rngParam2.setText("Max");
 			}
 			if(rngType.getSelectedIndex() == 1)
 			{
 				rngSelected = RNGTYPE.EXP;
 				setStatus("Random number generator switched to exponential distribution", false);
+				rngParam1.setText("Lambda");
+				rngParam2.setEnabled(false);
+				rngParam2.setText("N/A");
 			}
 			if(rngType.getSelectedIndex() == 2)
 			{
 				rngSelected = RNGTYPE.NORMAL;
 				setStatus("Random number generator switched to normal (Gauss) distribution", false);
+				rngParam1.setText("Mean");
+				rngParam2.setEnabled(true);
+				rngParam2.setText("Deviation");
 			}
 		}
 		if(e.getSource() == handling)
@@ -731,6 +765,8 @@ public class Simulator extends JFrame implements ActionListener {
 		handling.setEnabled(true);
 		broadcast.setEnabled(true);
 		MAC_TTL.setEnabled(true);
+		rngParam1.setEnabled(true);
+		if(rngSelected != RNGTYPE.EXP) rngParam2.setEnabled(true);
 	}
 	
 	public void disableGUI() //Before simulation
@@ -748,6 +784,8 @@ public class Simulator extends JFrame implements ActionListener {
 		handling.setEnabled(false);
 		broadcast.setEnabled(false);
 		MAC_TTL.setEnabled(false);
+		rngParam1.setEnabled(false);
+		rngParam2.setEnabled(false);
 	}
 	
 	public void setStatus(String msg, Boolean isError)
