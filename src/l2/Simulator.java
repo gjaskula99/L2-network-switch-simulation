@@ -62,7 +62,7 @@ public class Simulator extends JFrame implements ActionListener {
 	String[] rngTypeString = {"Uniform", "Exponential", "Normal"};
 	JComboBox<String> rngType = new JComboBox<String>(rngTypeString);
 	JLabel rngTypeTxt = new JLabel();
-	String[] handlingString = {"Instant", "10% of frame length", "25% of frame length", "50% of frame length" , "100% of frame length" , "Exponential"};
+	String[] handlingString = {"Instant", "10% of frame length", "25% of frame length", "50% of frame length" , "100% of frame length" , "Exp(0.001)"};
 	JTextField rngParam1 = new JTextField();
 	JTextField rngParam2 = new JTextField();
 	JLabel rngParamsTxt = new JLabel();
@@ -252,11 +252,11 @@ public class Simulator extends JFrame implements ActionListener {
 		frameLength.add(frameLengthVary);
 		frameLengthTxt.setBounds(950, 400, 140, 20);
 		frameLengthTxt.setText("Frame length");
-		frameLengthFixed.setBounds(950, 430, 200, 20);
+		frameLengthFixed.setBounds(950, 430, 150, 20);
 		frameLengthFixed.setText("Fixed 64B");
 		frameLengthFixed.setSelected(true);
 		frameLengthFixed.addActionListener(this);
-		frameLengthVary.setBounds(950, 450, 200, 20);;
+		frameLengthVary.setBounds(950, 450, 150, 20);;
 		frameLengthVary.setText("64B - 1536B");
 		frameLengthVary.addActionListener(this);
 		
@@ -473,7 +473,7 @@ public class Simulator extends JFrame implements ActionListener {
 					while(byteCounter < 5120)
 					{
 						//Push new frame if ready, Tx is free and Rx not empty
-						if(mySwitch.ethernet[i].Tx.IdleSwitch <= 0
+						if(mySwitch.ethernet[i].Tx.IdleSwitch <= 0 //Edit this line to make it store&forward - add checking if Rx buffer is 0 while s&f, no check in cut-through
 								&& !mySwitch.ethernet[i].Rx.isEmpty()
 								&& mySwitch.ethernet[i].Tx.getCurrentSize() < mySwitch.ethernet[i].Tx.getSize())
 						{
