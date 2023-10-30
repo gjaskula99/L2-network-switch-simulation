@@ -407,10 +407,11 @@ public class Simulator extends JFrame implements ActionListener {
 				if (ChronoUnit.SECONDS.between(then, LocalDateTime.now()) >= time) break;
 				progressBar.setValue((int) ChronoUnit.SECONDS.between(then, LocalDateTime.now()));
 				//ACTUAL SWITCH
-				for(Integer i = 0; i < PORTNUMBER; i++) //RX
+				for(Integer i = 0; i < PORTNUMBER; i++)
 				{
 					if(mySwitch.ethernet[i].isDown()) continue;
 					Integer byteCounter = 0; //How many bytes interface has received
+					//RECEIVING
 					while(byteCounter < 5120)
 					{
 						/*mySwitch.ethernet[2].Rx.push(new traffic.Frame(69, 2, 1, 3, 7));
@@ -465,11 +466,8 @@ public class Simulator extends JFrame implements ActionListener {
 						if(mySwitch.ethernet[i].Rx.isEmpty()) picPort[i].setIcon(portON);
 						else picPort[i].setIcon(portTRX);
 					}
-				}
-				for(Integer i = 0; i < PORTNUMBER; i++) //SWITCHING
-				{
-					if(mySwitch.ethernet[i].isDown()) continue;
-					Integer byteCounter = 0; //How many bytes interface has switched
+					//SWITCHING
+					byteCounter = 0;
 					while(byteCounter < 5120)
 					{
 						//Push new frame if ready, Tx is free and Rx not empty
@@ -518,11 +516,8 @@ public class Simulator extends JFrame implements ActionListener {
 						mySwitch.ethernet[i].Tx.IdleSwitch--;
 						byteCounter++;
 					}
-				}
-				for(Integer i = 0; i < PORTNUMBER; i++) //TX
-				{
-					if(mySwitch.ethernet[i].isDown()) continue;
-					Integer byteCounter = 0; //How many bytes interface has transmitted
+					//TRANSMITTING
+					byteCounter = 0;
 					while(byteCounter < 5120)
 					{
 						if(mySwitch.ethernet[i].Tx.Idle <= 0
@@ -757,6 +752,7 @@ public class Simulator extends JFrame implements ActionListener {
 		buttonStop.setEnabled(false);
 		buttonClr.setEnabled(true);
 		buttonFlushCAM.setEnabled(true);
+		buttonClearBuffers.setEnabled(true);
 		for(Integer i = 0; i < PORTNUMBER; i++) ethernet[i].setEnabled(true);
 		frameMinDelay.setEnabled(true);
 		rngType.setEnabled(true);
@@ -776,6 +772,7 @@ public class Simulator extends JFrame implements ActionListener {
 		buttonStop.setEnabled(true);
 		buttonClr.setEnabled(false);
 		buttonFlushCAM.setEnabled(false);
+		buttonClearBuffers.setEnabled(false);
 		for(Integer i = 0; i < PORTNUMBER; i++) ethernet[i].setEnabled(false);
 		frameMinDelay.setEnabled(false);
 		rngType.setEnabled(false);
