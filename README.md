@@ -1,7 +1,7 @@
 # L2 network switch simulation
 
-- By: BEng. Grzegorz Jaskuła
-- Supervision: Prof. Maciej Stasiak
+- By: BEng. Grzegorz Jaskuła, BEng/ Adam Rektor
+- Supervision: Prof. Maciej Stasiak, Phd. Slawomir Hanczewski
 
 Poznań University of Technology, 2023
 
@@ -17,11 +17,12 @@ This program is simulating layer 2 network switch with 8 ethernet interfaces. Ea
 
 - Traffic generated between 2-8 interfaces
 - Fixed and varied frames length
-- Store and forward switching mode, cut through in progress
+- Store and forward and cut through switching modes
 - Adjustable frame handling time
 - Adjustable minimal time between frames
 - Statistics display including: number of frames received/transmitted/lost, lost percentage, data transfer in/out, CAM (MAC) table view, interface buffer view
 - Image of switch with flashing LEDs
+- More features will be added in the future
 
 Simulator is run for time specified in seconds. **Time given refers to REAL COMPUTING TIME, not switch running time**. It means running speed may differ depending on hardware. Simulation can be resumed in the same way. Button *HALT* is supposed to stop simulator in emergency - use with caution as it violently kills the thread.
 
