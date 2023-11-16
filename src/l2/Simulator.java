@@ -147,7 +147,7 @@ public class Simulator extends JFrame implements ActionListener {
 		status.setFont(new Font("Serif", Font.PLAIN, 24));;
 		copy.setBounds(5, 740, 1180, 30);
 		copy.setFont(new Font("Serif", Font.PLAIN, 10));
-		copy.setText("©Grzegorz Jaskuła 2023, supervised by prof. Maciej Stasiak, Poznan University of Technology. This software is for educational purposes only and is provided as it is.");
+		copy.setText("©Grzegorz Jaskuła, Adam Rektor 2023. Supervised by prof. Maciej Stasiak, Phd. Slawomir Hanczewski. Poznan University of Technology. This software is for educational purposes only and is provided as it is.");
 		
 		iterationsTxt.setBounds(1050, 30, 140, 30);
 		iterationsTxt.setText("Run for seconds");
