@@ -54,6 +54,7 @@ public class Buffer {
 	public void clear()
 	{
 		for(int i = 0; i < currentSize; i++) this.pop();
+		this.currentSize = 0;
 	}
 	
 	public String getString()
