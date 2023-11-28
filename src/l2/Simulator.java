@@ -446,7 +446,7 @@ public class Simulator extends JFrame implements ActionListener {
 								Integer Lst = Integer.valueOf(packetsLst[i].getText()) + 1;
 								packetsLst[i].setText( Integer.toString(Lst) );
 							}
-							mySwitch.ethernet[i].Rx.Idle = (int) interfaceRNG[i].getNext() + FrameLength + minDelay;
+							mySwitch.ethernet[i].Rx.Idle = Math.abs( (int) interfaceRNG[i].getNext() + FrameLength + minDelay);
 							setStatus("Updating CAM table", false);
 							if(! mySwitch.CAM.exists(frame.getSource()))
 							{
@@ -552,11 +552,10 @@ public class Simulator extends JFrame implements ActionListener {
 						sumLst += Integer.valueOf(packetsLst[i].getText());
 						sumTotal += Integer.valueOf(packetsRx[i].getText());
 					}
-					Double losts = (sumLst / sumTotal) * 100;
-					if(losts > 100) losts = 100.0;
-					packetsLstTotal.setText( "Total lost: " + Double.toString(losts) + "%");
-					dataInbound.setText( "Data in: " + Double.toString(dataIn / 1024 / 1024) + " Mb");
-					dataServed.setText( "Data served: " + Double.toString(dataOut / 1024 / 1024) + " Mb");
+					Double losts = (sumLst / (sumTotal + sumLst)) * 100;
+					packetsLstTotal.setText( "Total lost: " + Double.toString(Math.round(losts*10000)/10000.0d) + "%");
+					dataInbound.setText( "Data in: " + Double.toString(Math.round(dataIn / 1024 / 1024 *10000)/10000.0d) + " Mb");
+					dataServed.setText( "Data served: " + Double.toString(Math.round(dataOut / 1024 / 1024 *10000)/10000.0d) + " Mb");
 					Buffer.setText("Rx:\n"+ mySwitch.ethernet[BufferSelect.getSelectedIndex() ].Rx.getString() + "\nTx:\n" + mySwitch.ethernet[ BufferSelect.getSelectedIndex() ].Tx.getString() );
 				}
 			} //SIMULATION END
@@ -583,15 +582,17 @@ public class Simulator extends JFrame implements ActionListener {
 				sumLst += Integer.valueOf(packetsLst[i].getText());
 				sumTotal += Integer.valueOf(packetsRx[i].getText());
 			}
-			Double losts = (sumLst / sumTotal) * 100;
-			if(losts > 100) losts = 100.0;
-			DataInVal += (dataIn / 1024 / 1024);
-			DataOutVal += (dataOut / 1024 / 1024);
-			packetsLstTotal.setText( "Total lost: " + Double.toString(losts) + "%");
+			System.out.println(sumLst + " " + sumTotal + "\n");
+			Double losts = (sumLst / (sumTotal + sumLst)) * 100;
+			if(losts > 100.0) losts = 100.0;
+			DataInVal += Math.round( (dataIn / 1024 / 1024) *10000)/10000.0d;
+			DataOutVal += Math.round( (dataOut / 1024 / 1024) *10000)/10000.0d;
+			packetsLstTotal.setText( "Total lost: " + Double.toString(Math.round(losts*10000)/10000.0d) + "%");
 			dataInbound.setText( "Data in: " + Double.toString(DataInVal) + " Mb");
 			dataServed.setText( "Data served: " + Double.toString(DataOutVal) + " Mb");
 			Buffer.setText("Rx:\n"+ mySwitch.ethernet[BufferSelect.getSelectedIndex() ].Rx.getString() + "\nTx:\n" + mySwitch.ethernet[ BufferSelect.getSelectedIndex() ].Tx.getString() );
-			this.interrupt();
+			//this.interrupt();
+			return;
 		}
 	}
 	
@@ -634,6 +635,11 @@ public class Simulator extends JFrame implements ActionListener {
 				setStatus("Cannot transmit - at least two interfaces must be up", true);
 				return;
 			}
+			if( (rngSelected == RNGTYPE.UNIFORM || rngSelected == RNGTYPE.NORMAL) && mySwitch.getNumberOfActiveInterfaces() < 3 )
+			{
+				setStatus("Cannot transmit - at least three interfaces must be up for UNI or NORM", true);
+				return;
+			}
 			
 			mySwitch.CAM.setDefaultValidity(MACTimeToLive);
 			isRunning = !isRunning;
@@ -658,6 +664,8 @@ public class Simulator extends JFrame implements ActionListener {
 				packetsLst[i].setText("0");
 				packetsBrd[i].setText("0");
 			}
+			DataInVal = 0.0;
+			DataOutVal = 0.0;
 			packetsLstTotal.setText("Total lost: 0.0%");
 			dataInbound.setText("Data in: 0 Mb");
 			dataServed.setText("Data served: 0 Mb");
