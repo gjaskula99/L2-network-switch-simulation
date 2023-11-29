@@ -4,8 +4,12 @@ import java.awt.Color;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.Properties;
 
 import javax.swing.JFrame;
 import javax.swing.ButtonGroup;
@@ -35,7 +39,7 @@ public class Simulator extends JFrame implements ActionListener {
 	Integer time = -1;
 	Boolean isRunning = false;
 	Thread thread;
-	static final Integer BUFFERSIZE = 10;
+	static Integer BUFFERSIZE = 10;
 	static final Integer PORTNUMBER = 8;
 	
 	enum RNGTYPE {UNIFORM, EXP, NORMAL};
@@ -237,10 +241,10 @@ public class Simulator extends JFrame implements ActionListener {
 		switchingModeTxt.setText("Switching mode");
 		switchingMode_SF.setBounds(950, 330, 150, 20);
 		switchingMode_SF.setText("Store and forward");
-		switchingMode_SF.setSelected(true);
 		switchingMode_SF.setEnabled(false); //TODO
 		switchingMode_CT.setBounds(950, 350, 150, 20);
 		switchingMode_CT.setText("Cut through");
+		switchingMode_CT.setSelected(true);
 		switchingMode_CT.setEnabled(false); //TODO
 		
 		broadcast.setBounds(1100, 330, 50, 20);
@@ -361,7 +365,56 @@ public class Simulator extends JFrame implements ActionListener {
 		window.add(BufferSelect);
 		window.add(buttonClearBuffers);
 		
-		window.setVisible(true);
+		//Read config
+	    System.out.println("Working Directory = " + System.getProperty("user.dir"));
+	    Properties prop = new Properties();
+	    String fileName = "Switch.config";
+	    System.out.println("Reading config file...");
+	    try (FileInputStream fis = new FileInputStream(fileName)) {
+	        prop.load(fis);
+	        System.out.println("config loaded - " + fileName + "\n");
+	        
+	        //Buffer size
+	        System.out.println("Switch.bufferSize : " + prop.getProperty("Switch.bufferSize"));
+	        BUFFERSIZE = Integer.valueOf(prop.getProperty("Switch.bufferSize"));
+	        mySwitch = new Switch(BUFFERSIZE);
+	        bufferSize.setText(prop.getProperty("Switch.bufferSize"));
+	        //Broadcast
+	        System.out.println("Switch.broadcast : " + prop.getProperty("Switch.broadcast"));
+	        broadcast.setText(prop.getProperty("Switch.broadcast"));
+	        broadcastTreshold = Integer.valueOf(prop.getProperty("Switch.broadcast"));
+	        //Interface states
+	        for(int i = 0; i < PORTNUMBER; i++)
+	        {
+		        System.out.println("Switch.interface" + i + " : " + prop.getProperty("Switch.interface" + i));
+		        if( Boolean.valueOf(prop.getProperty("Switch.interface" + i) ))
+		        {
+		        	mySwitch.ethernet[i].setState(State.UP);
+		        	ethernet[i].setSelected(true);
+		        	picPort[i].setIcon(portON);
+		        }
+	        }
+	        //Running time
+	        System.out.println("Simulator.iterations : " + prop.getProperty("Simulator.iterations"));
+	        iterations.setText( prop.getProperty("Simulator.iterations") );
+	        //Traffic RNG
+	        System.out.println("TrafficRNG.type : " + prop.getProperty("TrafficRNG.type"));
+	        rngType.setSelectedIndex( Integer.valueOf(prop.getProperty("TrafficRNG.type")) );
+	        System.out.println("TrafficRNG.param1 : " + prop.getProperty("TrafficRNG.param1"));
+	        generatorParam1 =  Double.valueOf(prop.getProperty("TrafficRNG.param1"));
+	        rngParam1.setText( prop.getProperty("TrafficRNG.param1") );
+	        System.out.println("TrafficRNG.param2 : " + prop.getProperty("TrafficRNG.param2"));
+	        generatorParam2 =  Double.valueOf(prop.getProperty("TrafficRNG.param2"));
+	        rngParam2.setText( prop.getProperty("TrafficRNG.param2") );
+	        
+		    System.out.println("Configuration loaded\n");
+	    } catch (FileNotFoundException ex) {
+	    	System.out.println("ERROR - " + ex.getLocalizedMessage() + "\nProceeding with default values\n");
+	    } catch (IOException ex) {
+	    	System.out.println("ERROR - " + ex.getLocalizedMessage() + "\nProceeding with default values\n");
+	    }
+	    
+	    window.setVisible(true);
 		setStatus("Ready", false);
 	}
 	
