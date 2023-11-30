@@ -50,8 +50,11 @@ public class Simulator extends JFrame implements ActionListener {
 	double TotalLost = 0.0;
 	double DataInVal = 0.0;
 	double DataOutVal = 0.0;
-	Integer handlingMode = 0;
+	Integer handlingMode = 1;
 	Boolean frameFixedSize = true;
+	Integer broadcastTreshold = 5;
+	Integer MACTimeToLive = 10;
+	Boolean CutThrough = true;
 	
 	//GUI
 	JFrame window = new JFrame();
@@ -90,6 +93,8 @@ public class Simulator extends JFrame implements ActionListener {
 	JLabel handlingTxt = new JLabel();
 	JTextField MAC_TTL = new JTextField();
 	JLabel MAC_TTLTxt = new JLabel();
+	JTextField MAC_Size = new JTextField();
+	JLabel MAC_SizeTxt = new JLabel();
 	JTextField broadcast = new JTextField();
 	JLabel broadcastTxt = new JLabel();
 	
@@ -127,13 +132,11 @@ public class Simulator extends JFrame implements ActionListener {
 	//Logic
 	Switch mySwitch = new Switch(BUFFERSIZE);
 	Random[] interfaceRNG = new Random[PORTNUMBER];
-	Uniform targetPortRNG = new Uniform();
-	Uniform broadcastRNG = new Uniform();
-	Integer broadcastTreshold = 5;
-	Integer MACTimeToLive = 10;
-	
 	Double generatorParam1 = 0.0;
 	Double generatorParam2 = 0.0;
+	
+	Uniform targetPortRNG = new Uniform();
+	Uniform broadcastRNG = new Uniform();
 	
 	//Constructior
 	Simulator()
@@ -241,11 +244,11 @@ public class Simulator extends JFrame implements ActionListener {
 		switchingModeTxt.setText("Switching mode");
 		switchingMode_SF.setBounds(950, 330, 150, 20);
 		switchingMode_SF.setText("Store and forward");
-		switchingMode_SF.setEnabled(false); //TODO
+		switchingMode_SF.addActionListener(this);
 		switchingMode_CT.setBounds(950, 350, 150, 20);
 		switchingMode_CT.setText("Cut through");
+		switchingMode_CT.addActionListener(this);
 		switchingMode_CT.setSelected(true);
-		switchingMode_CT.setEnabled(false); //TODO
 		
 		broadcast.setBounds(1100, 330, 50, 20);
 		broadcast.setText(Integer.toString(broadcastTreshold));
@@ -279,6 +282,11 @@ public class Simulator extends JFrame implements ActionListener {
 		MAC_TTL.setText(Integer.toString(MACTimeToLive));
 		MAC_TTLTxt.setBounds(1150, 500, 200, 20);
 		MAC_TTLTxt.setText("CAM table entry TTL");
+		MAC_Size.setBounds(1150, 560, 50, 20);
+		MAC_Size.setText("32");
+		MAC_Size.setEnabled(false);
+		MAC_SizeTxt.setBounds(1150, 540, 200, 20);
+		MAC_SizeTxt.setText("CAM table size");
 		
 		picSwitch.setBounds(53, 50, 947, 150);
 		for(Integer i = 0; i < PORTNUMBER; i++)
@@ -354,6 +362,8 @@ public class Simulator extends JFrame implements ActionListener {
 		window.add(frameMinDelayTxt);
 		window.add(MAC_TTL);
 		window.add(MAC_TTLTxt);
+		window.add(MAC_Size);
+		window.add(MAC_SizeTxt);
 		
 		window.add(picSwitch);
 		
@@ -377,8 +387,15 @@ public class Simulator extends JFrame implements ActionListener {
 	        //Buffer size
 	        System.out.println("Switch.bufferSize : " + prop.getProperty("Switch.bufferSize"));
 	        BUFFERSIZE = Integer.valueOf(prop.getProperty("Switch.bufferSize"));
-	        mySwitch = new Switch(BUFFERSIZE);
 	        bufferSize.setText(prop.getProperty("Switch.bufferSize"));
+	        //CAM size
+	        System.out.println("CAM.size : " + prop.getProperty("CAM.size"));
+	        MAC_Size.setText(prop.getProperty("CAM.size"));
+	        mySwitch = new Switch(BUFFERSIZE, 1, Integer.valueOf(prop.getProperty("CAM.size")));
+	        //CAM TTL
+	        System.out.println("CAM.TTL : " + prop.getProperty("CAM.TTL"));
+	        MACTimeToLive = Integer.valueOf(prop.getProperty("CAM.TTL"));
+	        MAC_TTL.setText(prop.getProperty("CAM.TTL"));
 	        //Broadcast
 	        System.out.println("Switch.broadcast : " + prop.getProperty("Switch.broadcast"));
 	        broadcast.setText(prop.getProperty("Switch.broadcast"));
@@ -394,6 +411,23 @@ public class Simulator extends JFrame implements ActionListener {
 		        	picPort[i].setIcon(portON);
 		        }
 	        }
+	        //Switching mode
+	        System.out.println("Switch.mode : " + prop.getProperty("Switch.mode"));
+	        CutThrough = Boolean.valueOf(prop.getProperty("Switch.mode"));
+	        if(CutThrough) switchingMode_CT.setSelected(true);
+	        else switchingMode_SF.setSelected(true);
+	        //Frame size
+	        System.out.println("Switch.fixedFrame : " + prop.getProperty("Switch.fixedFrame"));
+	        frameFixedSize = Boolean.valueOf(prop.getProperty("Switch.fixedFrame"));
+	        if(frameFixedSize) frameLengthFixed.setSelected(true);
+	        else frameLengthVary.setSelected(true);
+	        //Handling mode
+	        System.out.println("Switch.handling : " + prop.getProperty("Switch.handling"));
+	        handlingMode = Integer.valueOf(prop.getProperty("Switch.delay"));
+	        handling.setSelectedIndex(Integer.valueOf(prop.getProperty("Switch.handling")));
+	        //Minimal delay
+	        System.out.println("Switch.delay : " + prop.getProperty("Switch.delay"));
+	        frameMinDelay.setText(prop.getProperty("Switch.delay"));
 	        //Running time
 	        System.out.println("Simulator.iterations : " + prop.getProperty("Simulator.iterations"));
 	        iterations.setText( prop.getProperty("Simulator.iterations") );
@@ -463,14 +497,16 @@ public class Simulator extends JFrame implements ActionListener {
 				for(Integer i = 0; i < PORTNUMBER; i++)
 				{
 					if(mySwitch.ethernet[i].isDown()) continue;
+					Frame frame = new Frame();
 					Integer byteCounter = 0; //How many bytes interface has received
 					//RECEIVING
+					//System.out.println("RECEIVING");
 					while(byteCounter < 5120)
 					{
 						/*mySwitch.ethernet[2].Rx.push(new traffic.Frame(69, 2, 1, 3, 7));
 						mySwitch.ethernet[2].Rx.push(new traffic.Frame(0, 2, 1));
 						mySwitch.CAM.push(new l2.MAC(2, 3), 2);*/
-						if(mySwitch.ethernet[i].Rx.Idle == 0) //Generate new frame
+						if(CutThrough && mySwitch.ethernet[i].Rx.Idle == 0) //Generate new frame in cut-through
 						{
 							Boolean targetHostUp = false;
 							Boolean broadcast = false;
@@ -485,7 +521,44 @@ public class Simulator extends JFrame implements ActionListener {
 							setStatus("Generating new frame from interface " + i + " to interface " + Integer.toString(targetHost), false);
 							Integer length = 64;
 							if(!frameFixedSize) length = 64 * (int) (lengthRng.getNext() * 24 + 1);
-							Frame frame = new Frame(length, i, targetHost, 1, 1);
+							frame = new Frame(length, i, targetHost, 1, 1);
+							dataIn += length;
+							if(broadcast) frame = new Frame(length, i, 1); //Broadcast
+							if(!mySwitch.ethernet[i].Rx.isFull()) //Frame received
+							{
+								if(CutThrough)
+								{
+									mySwitch.ethernet[i].Rx.push(frame);
+									Integer Rx = Integer.valueOf(packetsRx[i].getText()) + 1;
+									packetsRx[i].setText( Integer.toString(Rx) );
+								}
+							}
+							else //Buffer is full - frame lost
+							{
+								Integer Lst = Integer.valueOf(packetsLst[i].getText()) + 1;
+								packetsLst[i].setText( Integer.toString(Lst) );
+							}
+							mySwitch.ethernet[i].Rx.Idle = Math.abs( (int) interfaceRNG[i].getNext() + FrameLength + minDelay);
+						}
+						if(!CutThrough) //Generate new frame in store&forward
+						{
+							if(mySwitch.ethernet[i].Rx.Idle < 0) mySwitch.ethernet[i].Rx.Idle = 64;
+							if(mySwitch.ethernet[i].Rx.Idle == 1)
+							{
+							Boolean targetHostUp = false;
+							Boolean broadcast = false;
+							int targetHost = -1;
+							if(broadcastRNG.getNextInt(0, 99) < broadcastTreshold) broadcast = true;
+							else while(!targetHostUp)
+							{
+								targetHost = (targetPortRNG.getNextInt(0, 7));
+								if(mySwitch.ethernet[targetHost].isUp() && targetHost != i) targetHostUp = true;
+							}
+							
+							setStatus("Generating new frame from interface " + i + " to interface " + Integer.toString(targetHost), false);
+							Integer length = 64;
+							if(!frameFixedSize) length = 64 * (int) (lengthRng.getNext() * 24 + 1);
+							frame = new Frame(length, i, targetHost, 1, 1);
 							dataIn += length;
 							if(broadcast) frame = new Frame(length, i, 1); //Broadcast
 							if(!mySwitch.ethernet[i].Rx.isFull()) //Frame received
@@ -500,18 +573,6 @@ public class Simulator extends JFrame implements ActionListener {
 								packetsLst[i].setText( Integer.toString(Lst) );
 							}
 							mySwitch.ethernet[i].Rx.Idle = Math.abs( (int) interfaceRNG[i].getNext() + FrameLength + minDelay);
-							setStatus("Updating CAM table", false);
-							if(! mySwitch.CAM.exists(frame.getSource()))
-							{
-								mySwitch.CAM.push(frame.getSource(), Character.getNumericValue( frame.getSource().getInterface() ));
-							}
-							else
-							{
-								mySwitch.CAM.isAlive(frame.getSource());
-							}
-							if(! mySwitch.CAM.exists(frame.getDestination())) //If destination MAC unknown set frame to broadcast
-							{
-								frame.setBroadcast();
 							}
 						}
 						mySwitch.ethernet[i].Rx.Idle--;
@@ -520,6 +581,7 @@ public class Simulator extends JFrame implements ActionListener {
 						else picPort[i].setIcon(portTRX);
 					}
 					//SWITCHING
+					//System.out.println("SWITCHING");
 					byteCounter = 0;
 					while(byteCounter < 5120)
 					{
@@ -528,6 +590,21 @@ public class Simulator extends JFrame implements ActionListener {
 								&& !mySwitch.ethernet[i].Rx.isEmpty()
 								&& mySwitch.ethernet[i].Tx.getCurrentSize() < mySwitch.ethernet[i].Tx.getSize())
 						{
+							//CAM table
+							setStatus("Updating CAM table", false);
+							if(! mySwitch.CAM.exists(mySwitch.ethernet[i].Rx.buffer[0].getSource()))
+							{
+								mySwitch.CAM.push(mySwitch.ethernet[i].Rx.buffer[0].getSource(), Character.getNumericValue( mySwitch.ethernet[i].Rx.buffer[0].getSource().getInterface() ));
+							}
+							else
+							{
+								mySwitch.CAM.isAlive(mySwitch.ethernet[i].Rx.buffer[0].getSource());
+							}
+							if(! mySwitch.CAM.exists(mySwitch.ethernet[i].Rx.buffer[0].getDestination())) //If destination MAC unknown set frame to broadcast
+							{
+								mySwitch.ethernet[i].Rx.buffer[0].setBroadcast();
+							}
+							//Actual switching
 							if(mySwitch.ethernet[i].Rx.buffer[0].getBroadcast() == false)
 							{
 								int targetInterface = Character.getNumericValue(mySwitch.ethernet[i].Rx.buffer[0].getDestination().getInterface());
@@ -551,14 +628,12 @@ public class Simulator extends JFrame implements ActionListener {
 									mySwitch.ethernet[j].Tx.push( mySwitch.ethernet[i].Rx.buffer[0] );
 									mySwitch.ethernet[j].Tx.IdleSwitch = mySwitch.ethernet[i].Rx.buffer[0].getLength();
 									//Add handling time
-									if(handlingMode == 1) mySwitch.ethernet[j].Tx.IdleSwitch += mySwitch.ethernet[j].Rx.buffer[0].getLength() / 10;
-									if(handlingMode == 2) mySwitch.ethernet[j].Tx.IdleSwitch += mySwitch.ethernet[j].Rx.buffer[0].getLength() / 4;
-									if(handlingMode == 3) mySwitch.ethernet[j].Tx.IdleSwitch += mySwitch.ethernet[j].Rx.buffer[0].getLength() / 2;
-									if(handlingMode == 4) mySwitch.ethernet[j].Tx.IdleSwitch += mySwitch.ethernet[j].Rx.buffer[0].getLength();
+									if(handlingMode == 1) mySwitch.ethernet[j].Tx.IdleSwitch += mySwitch.ethernet[i].Rx.buffer[0].getLength() / 10;
+									if(handlingMode == 2) mySwitch.ethernet[j].Tx.IdleSwitch += mySwitch.ethernet[i].Rx.buffer[0].getLength() / 4;
+									if(handlingMode == 3) mySwitch.ethernet[j].Tx.IdleSwitch += mySwitch.ethernet[i].Rx.buffer[0].getLength() / 2;
+									if(handlingMode == 4) mySwitch.ethernet[j].Tx.IdleSwitch += mySwitch.ethernet[i].Rx.buffer[0].getLength();
 									if(handlingMode == 5) mySwitch.ethernet[j].Tx.IdleSwitch += (int) handlingRng.getNext() * 1;
 									byteCounter++;
-									
-									
 								}
 								Integer Brd = Integer.valueOf(packetsBrd[i].getText()) + 1;
 								packetsBrd[i].setText( Integer.toString(Brd) );
@@ -570,6 +645,7 @@ public class Simulator extends JFrame implements ActionListener {
 						byteCounter++;
 					}
 					//TRANSMITTING
+					//System.out.println("TRANSMITTING");
 					byteCounter = 0;
 					while(byteCounter < 5120)
 					{
@@ -782,6 +858,16 @@ public class Simulator extends JFrame implements ActionListener {
 			frameFixedSize = false;
 			setStatus("Frame size set to varied 64B-1536B", false);
 		}
+		if(e.getSource() == switchingMode_CT)
+		{
+			CutThrough = true;
+			setStatus("Switching mode set to cut-trough", false);
+		}
+		if(e.getSource() == switchingMode_SF)
+		{
+			CutThrough = false;
+			setStatus("Switching mode set to store&forward", false);
+		}
 		for(Integer i = 0; i < PORTNUMBER; i++)
 		{
 			if(e.getSource() == ethernet[i])
@@ -824,6 +910,8 @@ public class Simulator extends JFrame implements ActionListener {
 		MAC_TTL.setEnabled(true);
 		rngParam1.setEnabled(true);
 		if(rngSelected != RNGTYPE.EXP) rngParam2.setEnabled(true);
+		switchingMode_CT.setEnabled(true);
+		switchingMode_SF.setEnabled(true);
 	}
 	
 	public void disableGUI() //Before simulation
@@ -844,6 +932,8 @@ public class Simulator extends JFrame implements ActionListener {
 		MAC_TTL.setEnabled(false);
 		rngParam1.setEnabled(false);
 		rngParam2.setEnabled(false);
+		switchingMode_CT.setEnabled(false);
+		switchingMode_SF.setEnabled(false);
 	}
 	
 	public void setStatus(String msg, Boolean isError)
