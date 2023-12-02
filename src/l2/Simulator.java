@@ -54,6 +54,7 @@ public class Simulator extends JFrame implements ActionListener {
 	Boolean frameFixedSize = true;
 	Integer broadcastTreshold = 5;
 	Integer MACTimeToLive = 10;
+	Boolean MACFlooding = false;
 	Boolean CutThrough = true;
 	
 	//GUI
@@ -87,6 +88,7 @@ public class Simulator extends JFrame implements ActionListener {
 	JLabel frameLengthTxt = new JLabel();
 	JRadioButton frameLengthFixed = new JRadioButton();
 	JRadioButton frameLengthVary = new JRadioButton();
+	JCheckBox flooding = new JCheckBox();
 	JTextField frameMinDelay = new JTextField();
 	JLabel frameMinDelayTxt = new JLabel();
 	JComboBox<String> handling = new JComboBox<String>(handlingString);
@@ -267,6 +269,10 @@ public class Simulator extends JFrame implements ActionListener {
 		frameLengthVary.setText("64B - 1536B");
 		frameLengthVary.addActionListener(this);
 		
+		flooding.setBounds(950, 480, 140, 20);
+		flooding.setText("MAC flooding");
+		flooding.addActionListener(this);
+		
 		handling.setBounds(1100, 430, 150, 20);
 		handling.setSelectedIndex(0);
 		handling.addActionListener(this);
@@ -356,6 +362,7 @@ public class Simulator extends JFrame implements ActionListener {
 		window.add(frameLengthTxt);
 		window.add(frameLengthFixed);
 		window.add(frameLengthVary);
+		window.add(flooding);
 		window.add(handling);
 		window.add(handlingTxt);
 		window.add(frameMinDelay);
@@ -396,6 +403,10 @@ public class Simulator extends JFrame implements ActionListener {
 	        System.out.println("CAM.TTL : " + prop.getProperty("CAM.TTL"));
 	        MACTimeToLive = Integer.valueOf(prop.getProperty("CAM.TTL"));
 	        MAC_TTL.setText(prop.getProperty("CAM.TTL"));
+	        //MAC flooding
+	        System.out.println("CAM.flood : " + prop.getProperty("CAM.flood"));
+	        MACFlooding = Boolean.valueOf(prop.getProperty("CAM.flood"));
+	        flooding.setSelected(MACFlooding);
 	        //Broadcast
 	        System.out.println("Switch.broadcast : " + prop.getProperty("Switch.broadcast"));
 	        broadcast.setText(prop.getProperty("Switch.broadcast"));
@@ -412,8 +423,8 @@ public class Simulator extends JFrame implements ActionListener {
 		        }
 	        }
 	        //Switching mode
-	        System.out.println("Switch.mode : " + prop.getProperty("Switch.mode"));
-	        CutThrough = Boolean.valueOf(prop.getProperty("Switch.mode"));
+	        System.out.println("Switch.modeCF : " + prop.getProperty("Switch.modeCF"));
+	        CutThrough = Boolean.valueOf(prop.getProperty("Switch.modeCF"));
 	        if(CutThrough) switchingMode_CT.setSelected(true);
 	        else switchingMode_SF.setSelected(true);
 	        //Frame size
@@ -479,6 +490,7 @@ public class Simulator extends JFrame implements ActionListener {
 				for(Integer i = 0; i < PORTNUMBER; i++) interfaceRNG[i] = new Exponential(generatorParam1);
 			if(rngSelected == RNGTYPE.NORMAL)
 				for(Integer i = 0; i < PORTNUMBER; i++) interfaceRNG[i] = new Normal();
+			Uniform floodRNG = new Uniform();
 			
 			Integer FrameLength = 64;
 			Integer minDelay = Integer.valueOf(frameMinDelay.getText());
@@ -494,6 +506,21 @@ public class Simulator extends JFrame implements ActionListener {
 				if (ChronoUnit.SECONDS.between(then, LocalDateTime.now()) >= time) break;
 				progressBar.setValue((int) ChronoUnit.SECONDS.between(then, LocalDateTime.now()));
 				//ACTUAL SWITCH
+				//MAC flooding
+				if(MACFlooding)
+				{
+					int numOfFrames = floodRNG.getNextInt(0, BUFFERSIZE);
+					for(int i = 0; i < numOfFrames; i++)
+					{
+						if(mySwitch.ethernet[0].Rx.isFull()) break;
+						Frame floodFrame = new Frame("213769ABCD" + String.valueOf(floodRNG.getNextInt(0, 9)+String.valueOf(floodRNG.getNextInt(0, 9)) ));
+						System.out.println(floodFrame.getSource().getString());
+						mySwitch.ethernet[0].Rx.push(floodFrame);
+						Integer Lst = Integer.valueOf(packetsLst[0].getText()) + 1;
+						packetsLst[0].setText( Integer.toString(Lst) );
+					}
+				}
+				//Looping through interfaces
 				for(Integer i = 0; i < PORTNUMBER; i++)
 				{
 					if(mySwitch.ethernet[i].isDown()) continue;
@@ -591,12 +618,15 @@ public class Simulator extends JFrame implements ActionListener {
 								&& mySwitch.ethernet[i].Tx.getCurrentSize() < mySwitch.ethernet[i].Tx.getSize())
 						{
 							//CAM table
-							setStatus("Updating CAM table", false);
+							setStatus("Updating CAM table", false); //Found in memory
 							if(! mySwitch.CAM.exists(mySwitch.ethernet[i].Rx.buffer[0].getSource()))
 							{
-								mySwitch.CAM.push(mySwitch.ethernet[i].Rx.buffer[0].getSource(), Character.getNumericValue( mySwitch.ethernet[i].Rx.buffer[0].getSource().getInterface() ));
+								if(! mySwitch.CAM.push(mySwitch.ethernet[i].Rx.buffer[0].getSource(), Character.getNumericValue( mySwitch.ethernet[i].Rx.buffer[0].getSource().getInterface() )) )
+								{
+									setStatus("CAM table is full!", false);
+								}
 							}
-							else
+							else //Not Found in memory
 							{
 								mySwitch.CAM.isAlive(mySwitch.ethernet[i].Rx.buffer[0].getSource());
 							}
@@ -672,6 +702,7 @@ public class Simulator extends JFrame implements ActionListener {
 				if(oldProgress != progressBar.getValue())
 				{
 					oldProgress = progressBar.getValue();
+					CAMTxt.setText("CAM TABLE (" + mySwitch.CAM.getSize() + " entries)");
 					CAM.setText(mySwitch.CAM.listTable());
 					
 					double sumLst = 0.0;
@@ -703,6 +734,7 @@ public class Simulator extends JFrame implements ActionListener {
 			CAM.setText(mySwitch.CAM.listTable());
 			mySwitch.CAM.decrement();
 			mySwitch.CAM.validate();
+			CAMTxt.setText("CAM TABLE (" + mySwitch.CAM.getSize() + " entries)");
 			
 			double sumLst = 0.0;
 			double sumTotal = 0.0;
@@ -803,6 +835,7 @@ public class Simulator extends JFrame implements ActionListener {
 		if(e.getSource() == buttonFlushCAM)
 		{
 			mySwitch.CAM.flush();
+			CAMTxt.setText("CAM TABLE");
 			CAM.setText(mySwitch.CAM.listTable());
 			setStatus("CAM table flushed", false);
 		}
@@ -857,6 +890,21 @@ public class Simulator extends JFrame implements ActionListener {
 		{
 			frameFixedSize = false;
 			setStatus("Frame size set to varied 64B-1536B", false);
+		}
+		if(e.getSource() == flooding)
+		{
+			MACFlooding = flooding.isSelected();
+			if(MACFlooding)
+			{
+				mySwitch.ethernet[0].setState(State.UP);
+	        	ethernet[0].setSelected(true);
+	        	picPort[0].setIcon(portON);
+				setStatus("eth0 will flood network with false MACs", false);
+			}
+			else
+			{
+				setStatus("eth0 will act normally", false);
+			}
 		}
 		if(e.getSource() == switchingMode_CT)
 		{

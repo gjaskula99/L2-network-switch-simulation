@@ -17,6 +17,11 @@ public class MAC {
 		this.address = str.toCharArray();
 	}
 	
+	public MAC(String address)
+	{
+		this.address = address.toCharArray();
+	}
+	
 	char[] address = new char[12];
 	
 	public char[] getMAC()
