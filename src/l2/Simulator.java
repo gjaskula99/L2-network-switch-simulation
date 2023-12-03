@@ -41,6 +41,7 @@ public class Simulator extends JFrame implements ActionListener {
 	Thread thread;
 	static Integer BUFFERSIZE = 10;
 	static final Integer PORTNUMBER = 8;
+	static Integer INTERFACESPEED = 6400;
 	
 	enum RNGTYPE {UNIFORM, EXP, NORMAL};
 	RNGTYPE rngSelected = RNGTYPE.EXP;
@@ -67,6 +68,8 @@ public class Simulator extends JFrame implements ActionListener {
 	JButton buttonClr = new JButton("Clear stats");
 	JLabel iterationsTxt = new JLabel();
 	JTextField iterations = new JTextField();
+	JLabel speedTxt = new JLabel("eth speed (bytes)");
+	JTextField speed = new JTextField("6400");
 	String[] rngTypeString = {"Uniform", "Exponential", "Normal"};
 	JComboBox<String> rngType = new JComboBox<String>(rngTypeString);
 	JLabel rngTypeTxt = new JLabel();
@@ -162,6 +165,8 @@ public class Simulator extends JFrame implements ActionListener {
 		iterationsTxt.setText("Run for seconds");
 		iterations.setBounds(1050, 60, 100, 30);
 		iterations.setText(Integer.toString(0));
+		speedTxt.setBounds(1160, 30, 120, 30);
+		speed.setBounds(1160, 60, 100, 30);
 		buttonRun.setBounds(1050, 90, 100, 30);
 		buttonRun.addActionListener(this);
 		buttonStop.setBounds(1050, 120, 100, 30);
@@ -335,6 +340,8 @@ public class Simulator extends JFrame implements ActionListener {
 		window.add(buttonClr);
 		window.add(iterationsTxt);
 		window.add(iterations);
+		window.add(speedTxt);
+		window.add(speed);
 		window.add(status);
 		window.add(rngType);
 		window.add(rngTypeTxt);
@@ -422,6 +429,10 @@ public class Simulator extends JFrame implements ActionListener {
 		        	picPort[i].setIcon(portON);
 		        }
 	        }
+	        //Speed
+	        System.out.println("Switch.speed : " + prop.getProperty("Switch.speed"));
+	        INTERFACESPEED = Integer.valueOf(prop.getProperty("Switch.speed"));
+	        speed.setText(prop.getProperty("Switch.speed"));
 	        //Switching mode
 	        System.out.println("Switch.modeCF : " + prop.getProperty("Switch.modeCF"));
 	        CutThrough = Boolean.valueOf(prop.getProperty("Switch.modeCF"));
@@ -453,12 +464,13 @@ public class Simulator extends JFrame implements ActionListener {
 	        rngParam2.setText( prop.getProperty("TrafficRNG.param2") );
 	        
 		    System.out.println("Configuration loaded\n");
-	    } catch (FileNotFoundException ex) {
-	    	System.out.println("ERROR - " + ex.getLocalizedMessage() + "\nProceeding with default values\n");
-	    } catch (IOException ex) {
+		    assert BUFFERSIZE > 0;
+		    assert Integer.valueOf(MAC_Size.getText()) > 0;
+	    } catch (Exception ex) {
 	    	System.out.println("ERROR - " + ex.getLocalizedMessage() + "\nProceeding with default values\n");
 	    }
 	    
+	    window.setIconImage(portON.getImage());
 	    window.setVisible(true);
 		setStatus("Ready", false);
 	}
@@ -514,7 +526,7 @@ public class Simulator extends JFrame implements ActionListener {
 					{
 						if(mySwitch.ethernet[0].Rx.isFull()) break;
 						Frame floodFrame = new Frame("213769ABCD" + String.valueOf(floodRNG.getNextInt(0, 9)+String.valueOf(floodRNG.getNextInt(0, 9)) ));
-						System.out.println(floodFrame.getSource().getString());
+						//System.out.println(floodFrame.getSource().getString());
 						mySwitch.ethernet[0].Rx.push(floodFrame);
 						Integer Lst = Integer.valueOf(packetsLst[0].getText()) + 1;
 						packetsLst[0].setText( Integer.toString(Lst) );
@@ -528,7 +540,7 @@ public class Simulator extends JFrame implements ActionListener {
 					Integer byteCounter = 0; //How many bytes interface has received
 					//RECEIVING
 					//System.out.println("RECEIVING");
-					while(byteCounter < 5120)
+					while(byteCounter < INTERFACESPEED)
 					{
 						/*mySwitch.ethernet[2].Rx.push(new traffic.Frame(69, 2, 1, 3, 7));
 						mySwitch.ethernet[2].Rx.push(new traffic.Frame(0, 2, 1));
@@ -610,7 +622,7 @@ public class Simulator extends JFrame implements ActionListener {
 					//SWITCHING
 					//System.out.println("SWITCHING");
 					byteCounter = 0;
-					while(byteCounter < 5120)
+					while(byteCounter < INTERFACESPEED)
 					{
 						//Push new frame if ready, Tx is free and Rx not empty
 						if(mySwitch.ethernet[i].Tx.IdleSwitch <= 0 //Edit this line to make it store&forward - add checking if Rx buffer is 0 while s&f, no check in cut-through
@@ -677,7 +689,7 @@ public class Simulator extends JFrame implements ActionListener {
 					//TRANSMITTING
 					//System.out.println("TRANSMITTING");
 					byteCounter = 0;
-					while(byteCounter < 5120)
+					while(byteCounter < INTERFACESPEED)
 					{
 						if(mySwitch.ethernet[i].Tx.Idle <= 0
 								&& !mySwitch.ethernet[i].Tx.isEmpty())
@@ -771,6 +783,7 @@ public class Simulator extends JFrame implements ActionListener {
 		        d2 = Double.parseDouble( String.valueOf(frameMinDelay.getText()) );
 		        broadcastTreshold = Integer.parseInt( broadcast.getText() );
 		        MACTimeToLive = Integer.parseInt(MAC_TTL.getText());
+		        INTERFACESPEED = Integer.parseInt(speed.getText());
 		        generatorParam1 = Double.parseDouble(rngParam1.getText());
 		        if(rngSelected != RNGTYPE.EXP)
 		        {
@@ -781,7 +794,7 @@ public class Simulator extends JFrame implements ActionListener {
 				setStatus("Invalid input - not a number", true);
 		        return;
 		    }
-			if( d <= 0 || d2 < 0 || MACTimeToLive < 0)
+			if( d <= 0 || d2 < 0 || MACTimeToLive < 0 || INTERFACESPEED < 0)
 			{
 				setStatus("Invalid input - must be greater than 0", true);
 				return;
@@ -948,6 +961,7 @@ public class Simulator extends JFrame implements ActionListener {
 		buttonClr.setEnabled(true);
 		buttonFlushCAM.setEnabled(true);
 		buttonClearBuffers.setEnabled(true);
+		speed.setEnabled(true);
 		for(Integer i = 0; i < PORTNUMBER; i++) ethernet[i].setEnabled(true);
 		frameMinDelay.setEnabled(true);
 		rngType.setEnabled(true);
@@ -956,6 +970,7 @@ public class Simulator extends JFrame implements ActionListener {
 		handling.setEnabled(true);
 		broadcast.setEnabled(true);
 		MAC_TTL.setEnabled(true);
+		flooding.setEnabled(true);
 		rngParam1.setEnabled(true);
 		if(rngSelected != RNGTYPE.EXP) rngParam2.setEnabled(true);
 		switchingMode_CT.setEnabled(true);
@@ -970,6 +985,7 @@ public class Simulator extends JFrame implements ActionListener {
 		buttonClr.setEnabled(false);
 		buttonFlushCAM.setEnabled(false);
 		buttonClearBuffers.setEnabled(false);
+		speed.setEnabled(false);
 		for(Integer i = 0; i < PORTNUMBER; i++) ethernet[i].setEnabled(false);
 		frameMinDelay.setEnabled(false);
 		rngType.setEnabled(false);
@@ -978,6 +994,7 @@ public class Simulator extends JFrame implements ActionListener {
 		handling.setEnabled(false);
 		broadcast.setEnabled(false);
 		MAC_TTL.setEnabled(false);
+		flooding.setEnabled(false);
 		rngParam1.setEnabled(false);
 		rngParam2.setEnabled(false);
 		switchingMode_CT.setEnabled(false);
