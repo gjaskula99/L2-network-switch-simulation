@@ -504,6 +504,11 @@ public class Simulator extends JFrame implements ActionListener {
 				for(Integer i = 0; i < PORTNUMBER; i++) interfaceRNG[i] = new Normal();
 			Uniform floodRNG = new Uniform();
 			
+			if(!CutThrough)
+			{
+				for(int i = 0; i < PORTNUMBER; i++) mySwitch.ethernet[0].Rx.Idle = 1;
+			}
+			
 			Integer FrameLength = 64;
 			Integer minDelay = Integer.valueOf(frameMinDelay.getText());
 			Double dataIn = 0.0;
@@ -581,7 +586,6 @@ public class Simulator extends JFrame implements ActionListener {
 						}
 						if(!CutThrough) //Generate new frame in store&forward
 						{
-							if(mySwitch.ethernet[i].Rx.Idle < 0) mySwitch.ethernet[i].Rx.Idle = 64;
 							if(mySwitch.ethernet[i].Rx.Idle == 1)
 							{
 							Boolean targetHostUp = false;
@@ -596,7 +600,6 @@ public class Simulator extends JFrame implements ActionListener {
 							
 							setStatus("Generating new frame from interface " + i + " to interface " + Integer.toString(targetHost), false);
 							Integer length = 64;
-							if(!frameFixedSize) length = 64 * (int) (lengthRng.getNext() * 24 + 1);
 							frame = new Frame(length, i, targetHost, 1, 1);
 							dataIn += length;
 							if(broadcast) frame = new Frame(length, i, 1); //Broadcast
@@ -755,7 +758,7 @@ public class Simulator extends JFrame implements ActionListener {
 				sumLst += Integer.valueOf(packetsLst[i].getText());
 				sumTotal += Integer.valueOf(packetsRx[i].getText());
 			}
-			System.out.println(sumLst + " " + sumTotal + "\n");
+			//System.out.println(sumLst + " " + sumTotal + "\n");
 			Double losts = (sumLst / (sumTotal + sumLst)) * 100;
 			if(losts > 100.0) losts = 100.0;
 			DataInVal += Math.round( (dataIn / 1024 / 1024) *10000)/10000.0d;
@@ -923,11 +926,15 @@ public class Simulator extends JFrame implements ActionListener {
 		{
 			CutThrough = true;
 			setStatus("Switching mode set to cut-trough", false);
+			frameLengthVary.setEnabled(true);
 		}
 		if(e.getSource() == switchingMode_SF)
 		{
 			CutThrough = false;
 			setStatus("Switching mode set to store&forward", false);
+			frameFixedSize = true;
+			frameLengthFixed.setSelected(true);
+			frameLengthVary.setEnabled(false);
 		}
 		for(Integer i = 0; i < PORTNUMBER; i++)
 		{
@@ -966,7 +973,7 @@ public class Simulator extends JFrame implements ActionListener {
 		frameMinDelay.setEnabled(true);
 		rngType.setEnabled(true);
 		frameLengthFixed.setEnabled(true);
-		frameLengthVary.setEnabled(true);
+		if(CutThrough) frameLengthVary.setEnabled(true);
 		handling.setEnabled(true);
 		broadcast.setEnabled(true);
 		MAC_TTL.setEnabled(true);
