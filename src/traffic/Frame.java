@@ -31,6 +31,15 @@ public class Frame {
 		this.isBroadcast = true;
 	}
 	
+	public Frame(String mac)
+	{
+		this.length = 64;
+		this.sourceAddress = new l2.MAC(mac);
+		this.destinationAddress = new l2.MAC();
+		this.state = state.INIT;
+		this.isBroadcast = true;
+	}
+	
 	int length; //64 - 1536 (1-24 * 64)
 	l2.MAC sourceAddress;
 	l2.MAC destinationAddress;

@@ -4,8 +4,12 @@ import java.awt.Color;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.Properties;
 
 import javax.swing.JFrame;
 import javax.swing.ButtonGroup;
@@ -35,8 +39,9 @@ public class Simulator extends JFrame implements ActionListener {
 	Integer time = -1;
 	Boolean isRunning = false;
 	Thread thread;
-	static final Integer BUFFERSIZE = 10;
+	static Integer BUFFERSIZE = 10;
 	static final Integer PORTNUMBER = 8;
+	static Integer INTERFACESPEED = 6400;
 	
 	enum RNGTYPE {UNIFORM, EXP, NORMAL};
 	RNGTYPE rngSelected = RNGTYPE.EXP;
@@ -46,8 +51,13 @@ public class Simulator extends JFrame implements ActionListener {
 	double TotalLost = 0.0;
 	double DataInVal = 0.0;
 	double DataOutVal = 0.0;
-	Integer handlingMode = 0;
+	Integer handlingMode = 1;
 	Boolean frameFixedSize = true;
+	Integer broadcastTreshold = 5;
+	Integer MACTimeToLive = 10;
+	Boolean MACFlooding = false;
+	Boolean CutThrough = true;
+	Boolean forceBroadcastPush = false;
 	
 	//GUI
 	JFrame window = new JFrame();
@@ -59,6 +69,8 @@ public class Simulator extends JFrame implements ActionListener {
 	JButton buttonClr = new JButton("Clear stats");
 	JLabel iterationsTxt = new JLabel();
 	JTextField iterations = new JTextField();
+	JLabel speedTxt = new JLabel("eth speed (bytes)");
+	JTextField speed = new JTextField("6400");
 	String[] rngTypeString = {"Uniform", "Exponential", "Normal"};
 	JComboBox<String> rngType = new JComboBox<String>(rngTypeString);
 	JLabel rngTypeTxt = new JLabel();
@@ -76,16 +88,20 @@ public class Simulator extends JFrame implements ActionListener {
 	JLabel switchingModeTxt = new JLabel();
 	JRadioButton switchingMode_SF = new JRadioButton();
 	JRadioButton switchingMode_CT = new JRadioButton();
+	JCheckBox forcePush = new JCheckBox();
 	ButtonGroup frameLength = new ButtonGroup();
 	JLabel frameLengthTxt = new JLabel();
 	JRadioButton frameLengthFixed = new JRadioButton();
 	JRadioButton frameLengthVary = new JRadioButton();
+	JCheckBox flooding = new JCheckBox();
 	JTextField frameMinDelay = new JTextField();
 	JLabel frameMinDelayTxt = new JLabel();
 	JComboBox<String> handling = new JComboBox<String>(handlingString);
 	JLabel handlingTxt = new JLabel();
 	JTextField MAC_TTL = new JTextField();
 	JLabel MAC_TTLTxt = new JLabel();
+	JTextField MAC_Size = new JTextField();
+	JLabel MAC_SizeTxt = new JLabel();
 	JTextField broadcast = new JTextField();
 	JLabel broadcastTxt = new JLabel();
 	
@@ -123,13 +139,11 @@ public class Simulator extends JFrame implements ActionListener {
 	//Logic
 	Switch mySwitch = new Switch(BUFFERSIZE);
 	Random[] interfaceRNG = new Random[PORTNUMBER];
-	Uniform targetPortRNG = new Uniform();
-	Uniform broadcastRNG = new Uniform();
-	Integer broadcastTreshold = 5;
-	Integer MACTimeToLive = 10;
-	
 	Double generatorParam1 = 0.0;
 	Double generatorParam2 = 0.0;
+	
+	Uniform targetPortRNG = new Uniform();
+	Uniform broadcastRNG = new Uniform();
 	
 	//Constructior
 	Simulator()
@@ -153,6 +167,8 @@ public class Simulator extends JFrame implements ActionListener {
 		iterationsTxt.setText("Run for seconds");
 		iterations.setBounds(1050, 60, 100, 30);
 		iterations.setText(Integer.toString(0));
+		speedTxt.setBounds(1160, 30, 120, 30);
+		speed.setBounds(1160, 60, 100, 30);
 		buttonRun.setBounds(1050, 90, 100, 30);
 		buttonRun.addActionListener(this);
 		buttonStop.setBounds(1050, 120, 100, 30);
@@ -237,16 +253,20 @@ public class Simulator extends JFrame implements ActionListener {
 		switchingModeTxt.setText("Switching mode");
 		switchingMode_SF.setBounds(950, 330, 150, 20);
 		switchingMode_SF.setText("Store and forward");
-		switchingMode_SF.setSelected(true);
-		switchingMode_SF.setEnabled(false); //TODO
+		switchingMode_SF.addActionListener(this);
 		switchingMode_CT.setBounds(950, 350, 150, 20);
 		switchingMode_CT.setText("Cut through");
-		switchingMode_CT.setEnabled(false); //TODO
+		switchingMode_CT.addActionListener(this);
+		switchingMode_CT.setSelected(true);
 		
 		broadcast.setBounds(1100, 330, 50, 20);
 		broadcast.setText(Integer.toString(broadcastTreshold));
 		broadcastTxt.setBounds(1100, 300, 150, 20);
 		broadcastTxt.setText("% of broadcast traffic");
+		
+		forcePush.setBounds(950, 370, 250, 20);
+		forcePush.setText("Force broadcast pushing");
+		forcePush.addActionListener(this);
 		
 		frameLength.add(frameLengthFixed);
 		frameLength.add(frameLengthVary);
@@ -259,6 +279,10 @@ public class Simulator extends JFrame implements ActionListener {
 		frameLengthVary.setBounds(950, 450, 150, 20);;
 		frameLengthVary.setText("64B - 1536B");
 		frameLengthVary.addActionListener(this);
+		
+		flooding.setBounds(950, 480, 140, 20);
+		flooding.setText("MAC flooding");
+		flooding.addActionListener(this);
 		
 		handling.setBounds(1100, 430, 150, 20);
 		handling.setSelectedIndex(0);
@@ -275,6 +299,11 @@ public class Simulator extends JFrame implements ActionListener {
 		MAC_TTL.setText(Integer.toString(MACTimeToLive));
 		MAC_TTLTxt.setBounds(1150, 500, 200, 20);
 		MAC_TTLTxt.setText("CAM table entry TTL");
+		MAC_Size.setBounds(1150, 560, 50, 20);
+		MAC_Size.setText("32");
+		MAC_Size.setEnabled(false);
+		MAC_SizeTxt.setBounds(1150, 540, 200, 20);
+		MAC_SizeTxt.setText("CAM table size");
 		
 		picSwitch.setBounds(53, 50, 947, 150);
 		for(Integer i = 0; i < PORTNUMBER; i++)
@@ -317,6 +346,8 @@ public class Simulator extends JFrame implements ActionListener {
 		window.add(buttonClr);
 		window.add(iterationsTxt);
 		window.add(iterations);
+		window.add(speedTxt);
+		window.add(speed);
 		window.add(status);
 		window.add(rngType);
 		window.add(rngTypeTxt);
@@ -341,15 +372,19 @@ public class Simulator extends JFrame implements ActionListener {
 		window.add(switchingMode_CT);
 		window.add(broadcast);
 		window.add(broadcastTxt);
+		window.add(forcePush);
 		window.add(frameLengthTxt);
 		window.add(frameLengthFixed);
 		window.add(frameLengthVary);
+		window.add(flooding);
 		window.add(handling);
 		window.add(handlingTxt);
 		window.add(frameMinDelay);
 		window.add(frameMinDelayTxt);
 		window.add(MAC_TTL);
 		window.add(MAC_TTLTxt);
+		window.add(MAC_Size);
+		window.add(MAC_SizeTxt);
 		
 		window.add(picSwitch);
 		
@@ -361,7 +396,93 @@ public class Simulator extends JFrame implements ActionListener {
 		window.add(BufferSelect);
 		window.add(buttonClearBuffers);
 		
-		window.setVisible(true);
+		//Read config
+	    System.out.println("Working Directory = " + System.getProperty("user.dir"));
+	    Properties prop = new Properties();
+	    String fileName = "Switch.config";
+	    System.out.println("Reading config file...");
+	    try (FileInputStream fis = new FileInputStream(fileName)) {
+	        prop.load(fis);
+	        System.out.println("config loaded - " + fileName + "\n");
+	        
+	        //Buffer size
+	        System.out.println("Switch.bufferSize : " + prop.getProperty("Switch.bufferSize"));
+	        BUFFERSIZE = Integer.valueOf(prop.getProperty("Switch.bufferSize"));
+	        bufferSize.setText(prop.getProperty("Switch.bufferSize"));
+	        //CAM size
+	        System.out.println("CAM.size : " + prop.getProperty("CAM.size"));
+	        MAC_Size.setText(prop.getProperty("CAM.size"));
+	        mySwitch = new Switch(BUFFERSIZE, 1, Integer.valueOf(prop.getProperty("CAM.size")));
+	        //CAM TTL
+	        System.out.println("CAM.TTL : " + prop.getProperty("CAM.TTL"));
+	        MACTimeToLive = Integer.valueOf(prop.getProperty("CAM.TTL"));
+	        MAC_TTL.setText(prop.getProperty("CAM.TTL"));
+	        //MAC flooding
+	        System.out.println("CAM.flood : " + prop.getProperty("CAM.flood"));
+	        MACFlooding = Boolean.valueOf(prop.getProperty("CAM.flood"));
+	        flooding.setSelected(MACFlooding);
+	        //Broadcast
+	        System.out.println("Switch.broadcast : " + prop.getProperty("Switch.broadcast"));
+	        broadcast.setText(prop.getProperty("Switch.broadcast"));
+	        broadcastTreshold = Integer.valueOf(prop.getProperty("Switch.broadcast"));
+	        //Broadcast force push
+	        System.out.println("Switch.forcePush : " + prop.getProperty("Switch.forcePush"));
+	        forceBroadcastPush = Boolean.valueOf(prop.getProperty("Switch.forcePush"));
+	        forcePush.setSelected(forceBroadcastPush);
+	        //Interface states
+	        for(int i = 0; i < PORTNUMBER; i++)
+	        {
+		        System.out.println("Switch.interface" + i + " : " + prop.getProperty("Switch.interface" + i));
+		        if( Boolean.valueOf(prop.getProperty("Switch.interface" + i) ))
+		        {
+		        	mySwitch.ethernet[i].setState(State.UP);
+		        	ethernet[i].setSelected(true);
+		        	picPort[i].setIcon(portON);
+		        }
+	        }
+	        //Speed
+	        System.out.println("Switch.speed : " + prop.getProperty("Switch.speed"));
+	        INTERFACESPEED = Integer.valueOf(prop.getProperty("Switch.speed"));
+	        speed.setText(prop.getProperty("Switch.speed"));
+	        //Switching mode
+	        System.out.println("Switch.modeCF : " + prop.getProperty("Switch.modeCF"));
+	        CutThrough = Boolean.valueOf(prop.getProperty("Switch.modeCF"));
+	        if(CutThrough) switchingMode_CT.setSelected(true);
+	        else switchingMode_SF.setSelected(true);
+	        //Frame size
+	        System.out.println("Switch.fixedFrame : " + prop.getProperty("Switch.fixedFrame"));
+	        frameFixedSize = Boolean.valueOf(prop.getProperty("Switch.fixedFrame"));
+	        if(frameFixedSize) frameLengthFixed.setSelected(true);
+	        else frameLengthVary.setSelected(true);
+	        //Handling mode
+	        System.out.println("Switch.handling : " + prop.getProperty("Switch.handling"));
+	        handlingMode = Integer.valueOf(prop.getProperty("Switch.delay"));
+	        handling.setSelectedIndex(Integer.valueOf(prop.getProperty("Switch.handling")));
+	        //Minimal delay
+	        System.out.println("Switch.delay : " + prop.getProperty("Switch.delay"));
+	        frameMinDelay.setText(prop.getProperty("Switch.delay"));
+	        //Running time
+	        System.out.println("Simulator.iterations : " + prop.getProperty("Simulator.iterations"));
+	        iterations.setText( prop.getProperty("Simulator.iterations") );
+	        //Traffic RNG
+	        System.out.println("TrafficRNG.type : " + prop.getProperty("TrafficRNG.type"));
+	        rngType.setSelectedIndex( Integer.valueOf(prop.getProperty("TrafficRNG.type")) );
+	        System.out.println("TrafficRNG.param1 : " + prop.getProperty("TrafficRNG.param1"));
+	        generatorParam1 =  Double.valueOf(prop.getProperty("TrafficRNG.param1"));
+	        rngParam1.setText( prop.getProperty("TrafficRNG.param1") );
+	        System.out.println("TrafficRNG.param2 : " + prop.getProperty("TrafficRNG.param2"));
+	        generatorParam2 =  Double.valueOf(prop.getProperty("TrafficRNG.param2"));
+	        rngParam2.setText( prop.getProperty("TrafficRNG.param2") );
+	        
+		    System.out.println("Configuration loaded\n");
+		    assert BUFFERSIZE > 0;
+		    assert Integer.valueOf(MAC_Size.getText()) > 0;
+	    } catch (Exception ex) {
+	    	System.out.println("ERROR - " + ex.getLocalizedMessage() + "\nProceeding with default values\n");
+	    }
+	    
+	    window.setIconImage(portON.getImage());
+	    window.setVisible(true);
 		setStatus("Ready", false);
 	}
 	
@@ -392,6 +513,12 @@ public class Simulator extends JFrame implements ActionListener {
 				for(Integer i = 0; i < PORTNUMBER; i++) interfaceRNG[i] = new Exponential(generatorParam1);
 			if(rngSelected == RNGTYPE.NORMAL)
 				for(Integer i = 0; i < PORTNUMBER; i++) interfaceRNG[i] = new Normal();
+			Uniform floodRNG = new Uniform();
+			
+			if(!CutThrough)
+			{
+				for(int i = 0; i < PORTNUMBER; i++) mySwitch.ethernet[0].Rx.Idle = 1;
+			}
 			
 			Integer FrameLength = 64;
 			Integer minDelay = Integer.valueOf(frameMinDelay.getText());
@@ -407,18 +534,71 @@ public class Simulator extends JFrame implements ActionListener {
 				if (ChronoUnit.SECONDS.between(then, LocalDateTime.now()) >= time) break;
 				progressBar.setValue((int) ChronoUnit.SECONDS.between(then, LocalDateTime.now()));
 				//ACTUAL SWITCH
+				//MAC flooding
+				if(MACFlooding)
+				{
+					int numOfFrames = floodRNG.getNextInt(0, BUFFERSIZE);
+					for(int i = 0; i < numOfFrames; i++)
+					{
+						if(mySwitch.ethernet[0].Rx.isFull()) break;
+						Frame floodFrame = new Frame("213769ABCD" + String.valueOf(floodRNG.getNextInt(0, 9)+String.valueOf(floodRNG.getNextInt(0, 9)) ));
+						//System.out.println(floodFrame.getSource().getString());
+						mySwitch.ethernet[0].Rx.push(floodFrame);
+						Integer Lst = Integer.valueOf(packetsLst[0].getText()) + 1;
+						packetsLst[0].setText( Integer.toString(Lst) );
+					}
+				}
+				//Looping through interfaces
 				for(Integer i = 0; i < PORTNUMBER; i++)
 				{
 					if(mySwitch.ethernet[i].isDown()) continue;
+					Frame frame = new Frame();
 					Integer byteCounter = 0; //How many bytes interface has received
 					//RECEIVING
-					while(byteCounter < 5120)
+					//System.out.println("RECEIVING");
+					while(byteCounter < INTERFACESPEED)
 					{
 						/*mySwitch.ethernet[2].Rx.push(new traffic.Frame(69, 2, 1, 3, 7));
 						mySwitch.ethernet[2].Rx.push(new traffic.Frame(0, 2, 1));
 						mySwitch.CAM.push(new l2.MAC(2, 3), 2);*/
-						if(mySwitch.ethernet[i].Rx.Idle == 0) //Generate new frame
+						if(CutThrough && mySwitch.ethernet[i].Rx.Idle == 0) //Generate new frame in cut-through
 						{
+							Boolean targetHostUp = false;
+							Boolean broadcast = false;
+							int targetHost = -1;
+							if(broadcastRNG.getNextInt(0, 99) < broadcastTreshold) broadcast = true;
+							else while(!targetHostUp)
+							{
+								targetHost = (targetPortRNG.getNextInt(0, 7));
+ 								if(mySwitch.ethernet[targetHost].isUp() && targetHost != i) targetHostUp = true;
+							}
+							
+							setStatus("Generating new frame from interface " + i + " to interface " + Integer.toString(targetHost), false);
+							Integer length = 64;
+							if(!frameFixedSize) length = 64 * (int) (lengthRng.getNext() * 24 + 1);
+							frame = new Frame(length, i, targetHost, 1, 1);
+							dataIn += length;
+							if(broadcast) frame = new Frame(length, i, 1); //Broadcast
+							if(!mySwitch.ethernet[i].Rx.isFull()) //Frame received
+							{
+								if(CutThrough)
+								{
+									mySwitch.ethernet[i].Rx.push(frame);
+									Integer Rx = Integer.valueOf(packetsRx[i].getText()) + 1;
+									packetsRx[i].setText( Integer.toString(Rx) );
+								}
+							}
+							else //Buffer is full - frame lost
+							{
+								Integer Lst = Integer.valueOf(packetsLst[i].getText()) + 1;
+								packetsLst[i].setText( Integer.toString(Lst) );
+							}
+							mySwitch.ethernet[i].Rx.Idle = Math.abs( (int) interfaceRNG[i].getNext() + FrameLength + minDelay);
+						}
+						if(!CutThrough) //Generate new frame in store&forward
+						{
+							if(mySwitch.ethernet[i].Rx.Idle == 1)
+							{
 							Boolean targetHostUp = false;
 							Boolean broadcast = false;
 							int targetHost = -1;
@@ -431,8 +611,7 @@ public class Simulator extends JFrame implements ActionListener {
 							
 							setStatus("Generating new frame from interface " + i + " to interface " + Integer.toString(targetHost), false);
 							Integer length = 64;
-							if(!frameFixedSize) length = 64 * (int) (lengthRng.getNext() * 24 + 1);
-							Frame frame = new Frame(length, i, targetHost, 1, 1);
+							frame = new Frame(length, i, targetHost, 1, 1);
 							dataIn += length;
 							if(broadcast) frame = new Frame(length, i, 1); //Broadcast
 							if(!mySwitch.ethernet[i].Rx.isFull()) //Frame received
@@ -446,19 +625,7 @@ public class Simulator extends JFrame implements ActionListener {
 								Integer Lst = Integer.valueOf(packetsLst[i].getText()) + 1;
 								packetsLst[i].setText( Integer.toString(Lst) );
 							}
-							mySwitch.ethernet[i].Rx.Idle = (int) interfaceRNG[i].getNext() + FrameLength + minDelay;
-							setStatus("Updating CAM table", false);
-							if(! mySwitch.CAM.exists(frame.getSource()))
-							{
-								mySwitch.CAM.push(frame.getSource(), Character.getNumericValue( frame.getSource().getInterface() ));
-							}
-							else
-							{
-								mySwitch.CAM.isAlive(frame.getSource());
-							}
-							if(! mySwitch.CAM.exists(frame.getDestination())) //If destination MAC unknown set frame to broadcast
-							{
-								frame.setBroadcast();
+							mySwitch.ethernet[i].Rx.Idle = Math.abs( (int) interfaceRNG[i].getNext() + FrameLength + minDelay);
 							}
 						}
 						mySwitch.ethernet[i].Rx.Idle--;
@@ -467,66 +634,102 @@ public class Simulator extends JFrame implements ActionListener {
 						else picPort[i].setIcon(portTRX);
 					}
 					//SWITCHING
+					//System.out.println("SWITCHING");
 					byteCounter = 0;
-					while(byteCounter < 5120)
+					while(byteCounter < INTERFACESPEED)
 					{
 						//Push new frame if ready, Tx is free and Rx not empty
-						if(mySwitch.ethernet[i].Tx.IdleSwitch <= 0 //Edit this line to make it store&forward - add checking if Rx buffer is 0 while s&f, no check in cut-through
+						if(mySwitch.ethernet[i].Tx.IdleSwitch <= 0
 								&& !mySwitch.ethernet[i].Rx.isEmpty()
-								&& mySwitch.ethernet[i].Tx.getCurrentSize() < mySwitch.ethernet[i].Tx.getSize())
+								//&& mySwitch.ethernet[i].Tx.getCurrentSize() < mySwitch.ethernet[i].Tx.getSize()
+								)
 						{
-							if(mySwitch.ethernet[i].Rx.buffer[0].getBroadcast() == false)
+							//Check if target interface engress is full. If so end the loop.
+							//Does not apply to broadcast. If any of interfaces will be full the broadcast frame will not be pushed to it but will be removed from Rx.
+							//15 (F) is equal to broadcast.
+							boolean BREAK = false; //Used for forceBroadcastPush
+							int target = Character.getNumericValue( mySwitch.ethernet[i].Rx.buffer[0].getDestination().getInterface() );
+							if(target != 15) if(mySwitch.ethernet[ target ].Tx.isFull()) break;
+							else if(!forceBroadcastPush)
 							{
-								int targetInterface = Character.getNumericValue(mySwitch.ethernet[i].Rx.buffer[0].getDestination().getInterface());
-								mySwitch.ethernet[targetInterface].Tx.push( mySwitch.ethernet[i].Rx.buffer[0] );
-								mySwitch.ethernet[targetInterface].Tx.IdleSwitch = mySwitch.ethernet[i].Rx.buffer[0].getLength();
-								setStatus("Switching frame from interface " + mySwitch.ethernet[i].Rx.buffer[0].getSource().getInterface() + " to " + targetInterface, false);
+								for(int ii = 0; ii < PORTNUMBER; ii++) //Loop through all interfaces to check if not full
+								{
+									if(mySwitch.ethernet[i].isDown()) continue;
+									if(mySwitch.ethernet[i].Tx.isFull())
+									{
+										BREAK = true;
+										break;
+									}
+								}
+							}
+							if(BREAK) break; //Abort if frame is broadcast and cannot be fully pushed
+							
+							Frame f = mySwitch.ethernet[i].Rx.pop();
+							//CAM table
+							setStatus("Updating CAM table", false); //Found in memory
+							if(! mySwitch.CAM.exists(f.getSource()))
+							{
+								if(! mySwitch.CAM.push(f.getSource(), Character.getNumericValue( f.getSource().getInterface() )) )
+								{
+									setStatus("CAM table is full!", false);
+								}
+							}
+							else //Not Found in memory
+							{
+								mySwitch.CAM.isAlive(f.getSource());
+							}
+							if(! mySwitch.CAM.exists(f.getDestination())) //If destination MAC unknown set frame to broadcast
+							{
+								f.setBroadcast();
+							}
+							//Actual switching
+							if(f.getBroadcast() == false)
+							{
+								int targetInterface = Character.getNumericValue(f.getDestination().getInterface());
+								mySwitch.ethernet[targetInterface].Tx.push( f );
+								mySwitch.ethernet[targetInterface].Tx.IdleSwitch = f.getLength();
+								setStatus("Switching frame from interface " + f.getSource().getInterface() + " to " + targetInterface, false);
 								//Add handling time
-								if(handlingMode == 1) mySwitch.ethernet[i].Tx.IdleSwitch += mySwitch.ethernet[i].Rx.buffer[0].getLength() / 10;
-								if(handlingMode == 2) mySwitch.ethernet[i].Tx.IdleSwitch += mySwitch.ethernet[i].Rx.buffer[0].getLength() / 4;
-								if(handlingMode == 3) mySwitch.ethernet[i].Tx.IdleSwitch += mySwitch.ethernet[i].Rx.buffer[0].getLength() / 2;
-								if(handlingMode == 4) mySwitch.ethernet[i].Tx.IdleSwitch += mySwitch.ethernet[i].Rx.buffer[0].getLength();
-								if(handlingMode == 5) mySwitch.ethernet[i].Tx.IdleSwitch += (int) handlingRng.getNext() * 1;
-								//Drop frame from Rx
-								mySwitch.ethernet[i].Rx.pop();
+								if(handlingMode == 1) mySwitch.ethernet[i].Tx.IdleSwitch += f.getLength() / 10;
+								if(handlingMode == 2) mySwitch.ethernet[i].Tx.IdleSwitch += f.getLength() / 4;
+								if(handlingMode == 3) mySwitch.ethernet[i].Tx.IdleSwitch += f.getLength() / 2;
+								if(handlingMode == 4) mySwitch.ethernet[i].Tx.IdleSwitch += f.getLength();
+								if(handlingMode == 5) mySwitch.ethernet[i].Tx.IdleSwitch += f.getLength() + (int) handlingRng.getNext() * 1;
 							}
 							else
 							{
 								for(Integer j = 0; j < PORTNUMBER; j++) //Push broadcast to all active interfaces
 								{
 									if(mySwitch.ethernet[j].isDown() || i == j) continue;
-									mySwitch.ethernet[j].Tx.push( mySwitch.ethernet[i].Rx.buffer[0] );
-									mySwitch.ethernet[j].Tx.IdleSwitch = mySwitch.ethernet[i].Rx.buffer[0].getLength();
+									mySwitch.ethernet[j].Tx.push( f );
+									mySwitch.ethernet[j].Tx.IdleSwitch = f.getLength();
 									//Add handling time
-									if(handlingMode == 1) mySwitch.ethernet[j].Tx.IdleSwitch += mySwitch.ethernet[j].Rx.buffer[0].getLength() / 10;
-									if(handlingMode == 2) mySwitch.ethernet[j].Tx.IdleSwitch += mySwitch.ethernet[j].Rx.buffer[0].getLength() / 4;
-									if(handlingMode == 3) mySwitch.ethernet[j].Tx.IdleSwitch += mySwitch.ethernet[j].Rx.buffer[0].getLength() / 2;
-									if(handlingMode == 4) mySwitch.ethernet[j].Tx.IdleSwitch += mySwitch.ethernet[j].Rx.buffer[0].getLength();
-									if(handlingMode == 5) mySwitch.ethernet[j].Tx.IdleSwitch += (int) handlingRng.getNext() * 1;
+									if(handlingMode == 1) mySwitch.ethernet[i].Tx.IdleSwitch += f.getLength() / 10;
+									if(handlingMode == 2) mySwitch.ethernet[i].Tx.IdleSwitch += f.getLength() / 4;
+									if(handlingMode == 3) mySwitch.ethernet[i].Tx.IdleSwitch += f.getLength() / 2;
+									if(handlingMode == 4) mySwitch.ethernet[i].Tx.IdleSwitch += f.getLength();
+									if(handlingMode == 5) mySwitch.ethernet[i].Tx.IdleSwitch += f.getLength() + (int) handlingRng.getNext() * 1;
 									byteCounter++;
-									
-									
 								}
 								Integer Brd = Integer.valueOf(packetsBrd[i].getText()) + 1;
 								packetsBrd[i].setText( Integer.toString(Brd) );
-								//Drop frame from Rx
-								mySwitch.ethernet[i].Rx.pop();
 							}
 						}
 						mySwitch.ethernet[i].Tx.IdleSwitch--;
 						byteCounter++;
 					}
 					//TRANSMITTING
+					//System.out.println("TRANSMITTING");
 					byteCounter = 0;
-					while(byteCounter < 5120)
+					while(byteCounter < INTERFACESPEED)
 					{
 						if(mySwitch.ethernet[i].Tx.Idle <= 0
 								&& !mySwitch.ethernet[i].Tx.isEmpty())
 						{
-							setStatus("Transmitting frame from interface " + mySwitch.ethernet[i].Tx.buffer[0].getSource().getInterface() + " to " + mySwitch.ethernet[i].Tx.buffer[0].getDestination().getInterface(), false);
-							dataOut += mySwitch.ethernet[i].Tx.buffer[0].getLength();
-							mySwitch.ethernet[i].Tx.Idle = mySwitch.ethernet[i].Tx.buffer[0].getLength();
-							mySwitch.ethernet[i].Tx.pop();
+							Frame f = mySwitch.ethernet[i].Tx.pop();
+							setStatus("Transmitting frame from interface " + f.getSource().getInterface() + " to " + f.getDestination().getInterface(), false);
+							dataOut += f.getLength();
+							mySwitch.ethernet[i].Tx.Idle = f.getLength();
 							picPort[i].setIcon(portTRX);
 							Integer Tx = Integer.valueOf(packetsTx[i].getText()) + 1;
 							packetsTx[i].setText( Integer.toString(Tx) );
@@ -543,6 +746,7 @@ public class Simulator extends JFrame implements ActionListener {
 				if(oldProgress != progressBar.getValue())
 				{
 					oldProgress = progressBar.getValue();
+					CAMTxt.setText("CAM TABLE (" + mySwitch.CAM.getSize() + " entries)");
 					CAM.setText(mySwitch.CAM.listTable());
 					
 					double sumLst = 0.0;
@@ -552,11 +756,10 @@ public class Simulator extends JFrame implements ActionListener {
 						sumLst += Integer.valueOf(packetsLst[i].getText());
 						sumTotal += Integer.valueOf(packetsRx[i].getText());
 					}
-					Double losts = (sumLst / sumTotal) * 100;
-					if(losts > 100) losts = 100.0;
-					packetsLstTotal.setText( "Total lost: " + Double.toString(losts) + "%");
-					dataInbound.setText( "Data in: " + Double.toString(dataIn / 1024 / 1024) + " Mb");
-					dataServed.setText( "Data served: " + Double.toString(dataOut / 1024 / 1024) + " Mb");
+					Double losts = (sumLst / (sumTotal + sumLst)) * 100;
+					packetsLstTotal.setText( "Total lost: " + Double.toString(Math.round(losts*10000)/10000.0d) + "%");
+					dataInbound.setText( "Data in: " + Double.toString(Math.round(dataIn / 1024 / 1024 *10000)/10000.0d) + " Mb");
+					dataServed.setText( "Data served: " + Double.toString(Math.round(dataOut / 1024 / 1024 *10000)/10000.0d) + " Mb");
 					Buffer.setText("Rx:\n"+ mySwitch.ethernet[BufferSelect.getSelectedIndex() ].Rx.getString() + "\nTx:\n" + mySwitch.ethernet[ BufferSelect.getSelectedIndex() ].Tx.getString() );
 				}
 			} //SIMULATION END
@@ -575,6 +778,7 @@ public class Simulator extends JFrame implements ActionListener {
 			CAM.setText(mySwitch.CAM.listTable());
 			mySwitch.CAM.decrement();
 			mySwitch.CAM.validate();
+			CAMTxt.setText("CAM TABLE (" + mySwitch.CAM.getSize() + " entries)");
 			
 			double sumLst = 0.0;
 			double sumTotal = 0.0;
@@ -583,15 +787,17 @@ public class Simulator extends JFrame implements ActionListener {
 				sumLst += Integer.valueOf(packetsLst[i].getText());
 				sumTotal += Integer.valueOf(packetsRx[i].getText());
 			}
-			Double losts = (sumLst / sumTotal) * 100;
-			if(losts > 100) losts = 100.0;
-			DataInVal += (dataIn / 1024 / 1024);
-			DataOutVal += (dataOut / 1024 / 1024);
-			packetsLstTotal.setText( "Total lost: " + Double.toString(losts) + "%");
+			//System.out.println(sumLst + " " + sumTotal + "\n");
+			Double losts = (sumLst / (sumTotal + sumLst)) * 100;
+			if(losts > 100.0) losts = 100.0;
+			DataInVal += Math.round( (dataIn / 1024 / 1024) *10000)/10000.0d;
+			DataOutVal += Math.round( (dataOut / 1024 / 1024) *10000)/10000.0d;
+			packetsLstTotal.setText( "Total lost: " + Double.toString(Math.round(losts*10000)/10000.0d) + "%");
 			dataInbound.setText( "Data in: " + Double.toString(DataInVal) + " Mb");
 			dataServed.setText( "Data served: " + Double.toString(DataOutVal) + " Mb");
 			Buffer.setText("Rx:\n"+ mySwitch.ethernet[BufferSelect.getSelectedIndex() ].Rx.getString() + "\nTx:\n" + mySwitch.ethernet[ BufferSelect.getSelectedIndex() ].Tx.getString() );
-			this.interrupt();
+			//this.interrupt();
+			return;
 		}
 	}
 	
@@ -609,6 +815,7 @@ public class Simulator extends JFrame implements ActionListener {
 		        d2 = Double.parseDouble( String.valueOf(frameMinDelay.getText()) );
 		        broadcastTreshold = Integer.parseInt( broadcast.getText() );
 		        MACTimeToLive = Integer.parseInt(MAC_TTL.getText());
+		        INTERFACESPEED = Integer.parseInt(speed.getText());
 		        generatorParam1 = Double.parseDouble(rngParam1.getText());
 		        if(rngSelected != RNGTYPE.EXP)
 		        {
@@ -619,7 +826,7 @@ public class Simulator extends JFrame implements ActionListener {
 				setStatus("Invalid input - not a number", true);
 		        return;
 		    }
-			if( d <= 0 || d2 < 0 || MACTimeToLive < 0)
+			if( d <= 0 || d2 < 0 || MACTimeToLive < 0 || INTERFACESPEED < 0)
 			{
 				setStatus("Invalid input - must be greater than 0", true);
 				return;
@@ -658,6 +865,8 @@ public class Simulator extends JFrame implements ActionListener {
 				packetsLst[i].setText("0");
 				packetsBrd[i].setText("0");
 			}
+			DataInVal = 0.0;
+			DataOutVal = 0.0;
 			packetsLstTotal.setText("Total lost: 0.0%");
 			dataInbound.setText("Data in: 0 Mb");
 			dataServed.setText("Data served: 0 Mb");
@@ -666,6 +875,7 @@ public class Simulator extends JFrame implements ActionListener {
 		if(e.getSource() == buttonFlushCAM)
 		{
 			mySwitch.CAM.flush();
+			CAMTxt.setText("CAM TABLE");
 			CAM.setText(mySwitch.CAM.listTable());
 			setStatus("CAM table flushed", false);
 		}
@@ -721,6 +931,48 @@ public class Simulator extends JFrame implements ActionListener {
 			frameFixedSize = false;
 			setStatus("Frame size set to varied 64B-1536B", false);
 		}
+		if(e.getSource() == flooding)
+		{
+			MACFlooding = flooding.isSelected();
+			if(MACFlooding)
+			{
+				mySwitch.ethernet[0].setState(State.UP);
+	        	ethernet[0].setSelected(true);
+	        	picPort[0].setIcon(portON);
+				setStatus("eth0 will flood network with false MACs", false);
+			}
+			else
+			{
+				setStatus("eth0 will act normally", false);
+			}
+		}
+		if(e.getSource() == switchingMode_CT)
+		{
+			CutThrough = true;
+			setStatus("Switching mode set to cut-trough", false);
+			frameLengthVary.setEnabled(true);
+		}
+		if(e.getSource() == switchingMode_SF)
+		{
+			CutThrough = false;
+			setStatus("Switching mode set to store&forward", false);
+			frameFixedSize = true;
+			frameLengthFixed.setSelected(true);
+			frameLengthVary.setEnabled(false);
+		}
+		if(e.getSource() == forcePush)
+		{
+			if(forceBroadcastPush)
+			{
+				forceBroadcastPush = false;
+				setStatus("Broadcast frames will be pushed only if all interfaces engress is not full", false);
+			}
+			else
+			{
+				forceBroadcastPush = true;
+				setStatus("Broadcast frames will be pushed even if interfaces engress is full", false);
+			}
+		}
 		for(Integer i = 0; i < PORTNUMBER; i++)
 		{
 			if(e.getSource() == ethernet[i])
@@ -749,30 +1001,38 @@ public class Simulator extends JFrame implements ActionListener {
 	{
 		setStatus("Enabling user interface", false);
 		buttonRun.setEnabled(true);
+		iterations.setEnabled(true);
 		buttonStop.setEnabled(false);
 		buttonClr.setEnabled(true);
 		buttonFlushCAM.setEnabled(true);
 		buttonClearBuffers.setEnabled(true);
+		speed.setEnabled(true);
 		for(Integer i = 0; i < PORTNUMBER; i++) ethernet[i].setEnabled(true);
 		frameMinDelay.setEnabled(true);
 		rngType.setEnabled(true);
 		frameLengthFixed.setEnabled(true);
-		frameLengthVary.setEnabled(true);
+		if(CutThrough) frameLengthVary.setEnabled(true);
 		handling.setEnabled(true);
 		broadcast.setEnabled(true);
+		forcePush.setEnabled(true);
 		MAC_TTL.setEnabled(true);
+		flooding.setEnabled(true);
 		rngParam1.setEnabled(true);
 		if(rngSelected != RNGTYPE.EXP) rngParam2.setEnabled(true);
+		switchingMode_CT.setEnabled(true);
+		switchingMode_SF.setEnabled(true);
 	}
 	
 	public void disableGUI() //Before simulation
 	{
 		setStatus("Disabling user interface", false);
 		buttonRun.setEnabled(false);
+		iterations.setEnabled(false);
 		buttonStop.setEnabled(true);
 		buttonClr.setEnabled(false);
 		buttonFlushCAM.setEnabled(false);
 		buttonClearBuffers.setEnabled(false);
+		speed.setEnabled(false);
 		for(Integer i = 0; i < PORTNUMBER; i++) ethernet[i].setEnabled(false);
 		frameMinDelay.setEnabled(false);
 		rngType.setEnabled(false);
@@ -780,9 +1040,13 @@ public class Simulator extends JFrame implements ActionListener {
 		frameLengthVary.setEnabled(false);
 		handling.setEnabled(false);
 		broadcast.setEnabled(false);
+		forcePush.setEnabled(false);
 		MAC_TTL.setEnabled(false);
+		flooding.setEnabled(false);
 		rngParam1.setEnabled(false);
 		rngParam2.setEnabled(false);
+		switchingMode_CT.setEnabled(false);
+		switchingMode_SF.setEnabled(false);
 	}
 	
 	public void setStatus(String msg, Boolean isError)

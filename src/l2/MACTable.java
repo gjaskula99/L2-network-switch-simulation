@@ -15,6 +15,10 @@ public class MACTable {
 	int defaultValidity;
 	int maxSize;
 	
+	public int getSize()
+	{
+		return address.size();
+	}
 	public boolean exists(MAC addr)
 	{
 		//if(address.contains(addr)) return true;
