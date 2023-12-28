@@ -44,9 +44,9 @@ public class Buffer {
 		assert this.currentSize > 0;
 		currentSize--;
 		Frame f = buffer[0];
-		for(int i = currentSize; i >= 1; i--)
+		for(int i = 0; i < currentSize; i++)
 		{
-			buffer[i - 1] = buffer[i];
+			buffer[i] = buffer[i + 1];
 		}
 		return f;
 	}
