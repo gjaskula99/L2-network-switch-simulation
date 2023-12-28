@@ -57,6 +57,7 @@ public class Simulator extends JFrame implements ActionListener {
 	Integer MACTimeToLive = 10;
 	Boolean MACFlooding = false;
 	Boolean CutThrough = true;
+	Boolean forceBroadcastPush = false;
 	
 	//GUI
 	JFrame window = new JFrame();
@@ -87,6 +88,7 @@ public class Simulator extends JFrame implements ActionListener {
 	JLabel switchingModeTxt = new JLabel();
 	JRadioButton switchingMode_SF = new JRadioButton();
 	JRadioButton switchingMode_CT = new JRadioButton();
+	JCheckBox forcePush = new JCheckBox();
 	ButtonGroup frameLength = new ButtonGroup();
 	JLabel frameLengthTxt = new JLabel();
 	JRadioButton frameLengthFixed = new JRadioButton();
@@ -262,6 +264,10 @@ public class Simulator extends JFrame implements ActionListener {
 		broadcastTxt.setBounds(1100, 300, 150, 20);
 		broadcastTxt.setText("% of broadcast traffic");
 		
+		forcePush.setBounds(950, 370, 250, 20);
+		forcePush.setText("Force broadcast pushing");
+		forcePush.addActionListener(this);
+		
 		frameLength.add(frameLengthFixed);
 		frameLength.add(frameLengthVary);
 		frameLengthTxt.setBounds(950, 400, 140, 20);
@@ -366,6 +372,7 @@ public class Simulator extends JFrame implements ActionListener {
 		window.add(switchingMode_CT);
 		window.add(broadcast);
 		window.add(broadcastTxt);
+		window.add(forcePush);
 		window.add(frameLengthTxt);
 		window.add(frameLengthFixed);
 		window.add(frameLengthVary);
@@ -418,6 +425,10 @@ public class Simulator extends JFrame implements ActionListener {
 	        System.out.println("Switch.broadcast : " + prop.getProperty("Switch.broadcast"));
 	        broadcast.setText(prop.getProperty("Switch.broadcast"));
 	        broadcastTreshold = Integer.valueOf(prop.getProperty("Switch.broadcast"));
+	        //Broadcast force push
+	        System.out.println("Switch.forcePush : " + prop.getProperty("Switch.forcePush"));
+	        forceBroadcastPush = Boolean.valueOf(prop.getProperty("Switch.forcePush"));
+	        forcePush.setSelected(forceBroadcastPush);
 	        //Interface states
 	        for(int i = 0; i < PORTNUMBER; i++)
 	        {
@@ -559,7 +570,7 @@ public class Simulator extends JFrame implements ActionListener {
 							else while(!targetHostUp)
 							{
 								targetHost = (targetPortRNG.getNextInt(0, 7));
-								if(mySwitch.ethernet[targetHost].isUp() && targetHost != i) targetHostUp = true;
+ 								if(mySwitch.ethernet[targetHost].isUp() && targetHost != i) targetHostUp = true;
 							}
 							
 							setStatus("Generating new frame from interface " + i + " to interface " + Integer.toString(targetHost), false);
@@ -630,8 +641,29 @@ public class Simulator extends JFrame implements ActionListener {
 						//Push new frame if ready, Tx is free and Rx not empty
 						if(mySwitch.ethernet[i].Tx.IdleSwitch <= 0
 								&& !mySwitch.ethernet[i].Rx.isEmpty()
-								&& mySwitch.ethernet[i].Tx.getCurrentSize() < mySwitch.ethernet[i].Tx.getSize())
+								//&& mySwitch.ethernet[i].Tx.getCurrentSize() < mySwitch.ethernet[i].Tx.getSize()
+								)
 						{
+							//Check if target interface engress is full. If so end the loop.
+							//Does not apply to broadcast. If any of interfaces will be full the broadcast frame will not be pushed to it but will be removed from Rx.
+							//15 (F) is equal to broadcast.
+							boolean BREAK = false; //Used for forceBroadcastPush
+							int target = Character.getNumericValue( mySwitch.ethernet[i].Rx.buffer[0].getDestination().getInterface() );
+							if(target != 15) if(mySwitch.ethernet[ target ].Tx.isFull()) break;
+							else if(!forceBroadcastPush)
+							{
+								for(int ii = 0; ii < PORTNUMBER; ii++) //Loop through all interfaces to check if not full
+								{
+									if(mySwitch.ethernet[i].isDown()) continue;
+									if(mySwitch.ethernet[i].Tx.isFull())
+									{
+										BREAK = true;
+										break;
+									}
+								}
+							}
+							if(BREAK) break; //Abort if frame is broadcast and cannot be fully pushed
+							
 							Frame f = mySwitch.ethernet[i].Rx.pop();
 							//CAM table
 							setStatus("Updating CAM table", false); //Found in memory
@@ -809,11 +841,6 @@ public class Simulator extends JFrame implements ActionListener {
 				setStatus("Cannot transmit - at least two interfaces must be up", true);
 				return;
 			}
-			if( (rngSelected == RNGTYPE.UNIFORM || rngSelected == RNGTYPE.NORMAL) && mySwitch.getNumberOfActiveInterfaces() < 3 )
-			{
-				setStatus("Cannot transmit - at least three interfaces must be up for UNI or NORM", true);
-				return;
-			}
 			
 			mySwitch.CAM.setDefaultValidity(MACTimeToLive);
 			isRunning = !isRunning;
@@ -933,6 +960,19 @@ public class Simulator extends JFrame implements ActionListener {
 			frameLengthFixed.setSelected(true);
 			frameLengthVary.setEnabled(false);
 		}
+		if(e.getSource() == forcePush)
+		{
+			if(forceBroadcastPush)
+			{
+				forceBroadcastPush = false;
+				setStatus("Broadcast frames will be pushed only if all interfaces engress is not full", false);
+			}
+			else
+			{
+				forceBroadcastPush = true;
+				setStatus("Broadcast frames will be pushed even if interfaces engress is full", false);
+			}
+		}
 		for(Integer i = 0; i < PORTNUMBER; i++)
 		{
 			if(e.getSource() == ethernet[i])
@@ -961,6 +1001,7 @@ public class Simulator extends JFrame implements ActionListener {
 	{
 		setStatus("Enabling user interface", false);
 		buttonRun.setEnabled(true);
+		iterations.setEnabled(true);
 		buttonStop.setEnabled(false);
 		buttonClr.setEnabled(true);
 		buttonFlushCAM.setEnabled(true);
@@ -973,6 +1014,7 @@ public class Simulator extends JFrame implements ActionListener {
 		if(CutThrough) frameLengthVary.setEnabled(true);
 		handling.setEnabled(true);
 		broadcast.setEnabled(true);
+		forcePush.setEnabled(true);
 		MAC_TTL.setEnabled(true);
 		flooding.setEnabled(true);
 		rngParam1.setEnabled(true);
@@ -985,6 +1027,7 @@ public class Simulator extends JFrame implements ActionListener {
 	{
 		setStatus("Disabling user interface", false);
 		buttonRun.setEnabled(false);
+		iterations.setEnabled(false);
 		buttonStop.setEnabled(true);
 		buttonClr.setEnabled(false);
 		buttonFlushCAM.setEnabled(false);
@@ -997,6 +1040,7 @@ public class Simulator extends JFrame implements ActionListener {
 		frameLengthVary.setEnabled(false);
 		handling.setEnabled(false);
 		broadcast.setEnabled(false);
+		forcePush.setEnabled(false);
 		MAC_TTL.setEnabled(false);
 		flooding.setEnabled(false);
 		rngParam1.setEnabled(false);
