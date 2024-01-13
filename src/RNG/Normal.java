@@ -1,8 +1,17 @@
 package RNG;
 
 public class Normal extends Random{
+	double mean;
+	double deviation;
 	public Normal()
 	{
+		mean = 0.0;
+		deviation = 0.0;
+	}
+	public Normal(double m, double d)
+	{
+		mean = m;
+		deviation = d;
 	}
 	
 	public double getNext() {
@@ -12,7 +21,7 @@ public class Normal extends Random{
 		{
 			x += uniform.getNext();
 		}
-		return x / 6;
+		return (x / 6) + mean;
 	}
 	public double getNext(Integer n) {
 		double x = 0;
@@ -21,6 +30,6 @@ public class Normal extends Random{
 		{
 			x += uniform.getNext();
 		}
-		return x / n;
+		return (x / n) + mean;
 	}
 }
