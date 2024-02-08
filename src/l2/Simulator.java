@@ -512,7 +512,7 @@ public class Simulator extends JFrame implements ActionListener {
 			if(rngSelected == RNGTYPE.EXP)
 				for(Integer i = 0; i < PORTNUMBER; i++) interfaceRNG[i] = new Exponential(generatorParam1);
 			if(rngSelected == RNGTYPE.NORMAL)
-				for(Integer i = 0; i < PORTNUMBER; i++) interfaceRNG[i] = new Normal();
+				for(Integer i = 0; i < PORTNUMBER; i++) interfaceRNG[i] = new Normal(generatorParam1, generatorParam2);
 			Uniform floodRNG = new Uniform();
 			
 			if(!CutThrough)
@@ -553,6 +553,7 @@ public class Simulator extends JFrame implements ActionListener {
 				{
 					if(mySwitch.ethernet[i].isDown()) continue;
 					Frame frame = new Frame();
+					Integer SF_idle = 0;
 					Integer byteCounter = 0; //How many bytes interface has received
 					//RECEIVING
 					//System.out.println("RECEIVING");
@@ -597,7 +598,8 @@ public class Simulator extends JFrame implements ActionListener {
 						}
 						if(!CutThrough) //Generate new frame in store&forward
 						{
-							if(mySwitch.ethernet[i].Rx.Idle == 1)
+							if(mySwitch.ethernet[i].Rx.Idle == 0) SF_idle = 64;
+							if(SF_idle == 0)
 							{
 							Boolean targetHostUp = false;
 							Boolean broadcast = false;
@@ -625,8 +627,9 @@ public class Simulator extends JFrame implements ActionListener {
 								Integer Lst = Integer.valueOf(packetsLst[i].getText()) + 1;
 								packetsLst[i].setText( Integer.toString(Lst) );
 							}
-							mySwitch.ethernet[i].Rx.Idle = Math.abs( (int) interfaceRNG[i].getNext() + FrameLength + minDelay);
+							mySwitch.ethernet[i].Rx.Idle = Math.abs( (int) interfaceRNG[i].getNext() + minDelay);
 							}
+							SF_idle--;
 						}
 						mySwitch.ethernet[i].Rx.Idle--;
 						byteCounter++;
@@ -951,6 +954,12 @@ public class Simulator extends JFrame implements ActionListener {
 			CutThrough = true;
 			setStatus("Switching mode set to cut-trough", false);
 			frameLengthVary.setEnabled(true);
+			for(int i = 0; i > PORTNUMBER; i++)
+			{
+				mySwitch.ethernet[i].Rx.Idle = 0;
+				mySwitch.ethernet[i].Tx.IdleSwitch = 0;
+				mySwitch.ethernet[i].Tx.Idle = 0;
+			}
 		}
 		if(e.getSource() == switchingMode_SF)
 		{
@@ -959,6 +968,12 @@ public class Simulator extends JFrame implements ActionListener {
 			frameFixedSize = true;
 			frameLengthFixed.setSelected(true);
 			frameLengthVary.setEnabled(false);
+			for(int i = 0; i > PORTNUMBER; i++)
+			{
+				mySwitch.ethernet[i].Rx.Idle = 0;
+				mySwitch.ethernet[i].Tx.IdleSwitch = 0;
+				mySwitch.ethernet[i].Tx.Idle = 0;
+			}
 		}
 		if(e.getSource() == forcePush)
 		{
