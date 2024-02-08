@@ -21,7 +21,7 @@ public class Normal extends Random{
 		{
 			x += uniform.getNext();
 		}
-		return (x / 6) + mean;
+		return ((x / 6)-0.5)*10*deviation + mean;
 	}
 	public double getNext(Integer n) {
 		double x = 0;
@@ -30,6 +30,6 @@ public class Normal extends Random{
 		{
 			x += uniform.getNext();
 		}
-		return (x / n) + mean;
+		return ((x / n)-0.5)*10*deviation + mean;
 	}
 }
