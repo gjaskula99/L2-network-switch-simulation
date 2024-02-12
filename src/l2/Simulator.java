@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Properties;
+import java.util.Vector;
 
 import javax.swing.JFrame;
 import javax.swing.ButtonGroup;
@@ -30,6 +31,7 @@ import RNG.Random;
 import RNG.Uniform;
 import RNG.Exponential;
 import RNG.Normal;
+import plot.PlotWindow;
 
 public class Simulator extends JFrame implements ActionListener {
 	private static final long serialVersionUID = 1L;
@@ -135,6 +137,16 @@ public class Simulator extends JFrame implements ActionListener {
 	JLabel BufferTxt = new JLabel();
 	Integer[] InterfaceStrings = {0, 1, 2, 3, 4, 5, 6, 7};
 	JComboBox<Integer> BufferSelect = new JComboBox<Integer>(InterfaceStrings);
+	
+	//Plotting
+	String plotTypes[] = {"Wykres_1", "Wykres_2", "Wykres_3", "Wykres_4", "Wykres_5"};
+	JComboBox plotType = new JComboBox(plotTypes);
+	JLabel plotTypeTxt = new JLabel();
+	//Plot data
+	Vector<Double> plotData_Losts = new Vector<Double>();
+	Vector<Double> plotData_TrafficIn = new Vector<Double>();
+	Vector<Double> plotData_TrafficOut = new Vector<Double>();
+	//TD - add button to clear these vectors
 	
 	//Logic
 	Switch mySwitch = new Switch(BUFFERSIZE);
@@ -338,6 +350,11 @@ public class Simulator extends JFrame implements ActionListener {
         buttonClearBuffers.setText("Clear all buffers");
         buttonClearBuffers.setBounds(820, 570, 150, 25);
         buttonClearBuffers.addActionListener(this);
+        
+        plotTypeTxt.setBounds(1160, 95, 100, 25);
+        plotTypeTxt.setText("Generate plot");
+        plotType.setBounds(1160, 120, 100, 30);
+        plotType.addActionListener(this);
 		
 		//Add to JPanel
         setStatus("Setting up window", false);
@@ -395,6 +412,9 @@ public class Simulator extends JFrame implements ActionListener {
 		window.add(BufferTxt);
 		window.add(BufferSelect);
 		window.add(buttonClearBuffers);
+		
+		window.add(plotType);
+		window.add(plotTypeTxt);
 		
 		//Read config
 	    System.out.println("Working Directory = " + System.getProperty("user.dir"));
@@ -799,6 +819,11 @@ public class Simulator extends JFrame implements ActionListener {
 			dataInbound.setText( "Data in: " + Double.toString(DataInVal) + " Mb");
 			dataServed.setText( "Data served: " + Double.toString(DataOutVal) + " Mb");
 			Buffer.setText("Rx:\n"+ mySwitch.ethernet[BufferSelect.getSelectedIndex() ].Rx.getString() + "\nTx:\n" + mySwitch.ethernet[ BufferSelect.getSelectedIndex() ].Tx.getString() );
+			
+			plotData_Losts.addElement(losts);
+			plotData_TrafficIn.addElement(DataInVal);
+			plotData_TrafficOut.addElement(DataOutVal);
+			
 			//this.interrupt();
 			return;
 		}
@@ -986,6 +1011,22 @@ public class Simulator extends JFrame implements ActionListener {
 			{
 				forceBroadcastPush = true;
 				setStatus("Broadcast frames will be pushed even if interfaces engress is full", false);
+			}
+		}
+		if(e.getSource() == plotType)
+		{
+			switch(plotType.getSelectedIndex() + 1)
+			{
+				case 1 :
+				{
+					PlotWindow plot = new PlotWindow(plotData_TrafficOut, plotData_Losts);
+				}
+				//
+				//
+				default :
+				{
+					setStatus("Plotting failed", true);
+				}
 			}
 		}
 		for(Integer i = 0; i < PORTNUMBER; i++)
