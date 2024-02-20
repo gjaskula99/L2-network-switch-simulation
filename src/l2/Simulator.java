@@ -31,7 +31,6 @@ import RNG.Random;
 import RNG.Uniform;
 import RNG.Exponential;
 import RNG.Normal;
-import plot.PlotWindow;
 import plot.XYLineChart;
 
 public class Simulator extends JFrame implements ActionListener {
@@ -140,14 +139,23 @@ public class Simulator extends JFrame implements ActionListener {
 	JComboBox<Integer> BufferSelect = new JComboBox<Integer>(InterfaceStrings);
 	
 	//Plotting
-	String plotTypes[] = {"Data out / % lost", "Wykres_2", "Wykres_3", "Wykres_4", "Wykres_5"};
-	JComboBox plotType = new JComboBox(plotTypes);
+	String plotTypes[] = {"CAM TTL", "Broadcast %", "Received frames", "Transmitted frames", "Lost %",
+			"Transmitted broadcast frames", "Traffic intensity", "Data in (Mb)", "Data out (Mb)"};
+	JComboBox plotTypeX = new JComboBox(plotTypes);
+	JComboBox plotTypeY = new JComboBox(plotTypes);
 	JLabel plotTypeTxt = new JLabel();
+	JButton plotMake = new JButton();
+	JButton plotClear = new JButton();
 	//Plot data
+	Vector<Double> plotData_CAMTTL = new Vector<Double>();
+	Vector<Double> plotData_Broadcast = new Vector<Double>();
+	Vector<Double> plotData_Received = new Vector<Double>();
+	Vector<Double> plotData_Transmitted = new Vector<Double>();
 	Vector<Double> plotData_Losts = new Vector<Double>();
+	Vector<Double> plotData_BroadcastTx = new Vector<Double>();
+	Vector<Double> plotData_Intensity = new Vector<Double>();
 	Vector<Double> plotData_TrafficIn = new Vector<Double>();
 	Vector<Double> plotData_TrafficOut = new Vector<Double>();
-	//TD - add button to clear these vectors
 	
 	//Logic
 	Switch mySwitch = new Switch(BUFFERSIZE);
@@ -191,6 +199,19 @@ public class Simulator extends JFrame implements ActionListener {
 		buttonClr.setBounds(30, 500, 170, 30);
 		buttonClr.setEnabled(true);
 		buttonClr.addActionListener(this);
+		
+		plotTypeTxt.setBounds(220, 500, 90, 30);
+        plotTypeTxt.setText("Generate chart");
+        plotTypeX.setBounds(310, 500, 140, 30);
+        plotTypeX.setSelectedIndex(6);
+        plotTypeY.setBounds(460, 500, 140, 30);
+        plotTypeY.setSelectedIndex(4);
+        plotMake.setBounds(620, 500, 150, 30);
+        plotMake.setText("Create chart");
+        plotMake.addActionListener(this);
+        plotClear.setBounds(780, 500, 150, 30);
+        plotClear.setText("Clear charts data");
+        plotClear.addActionListener(this);
 		
 		rngType.setBounds(1020, 170, 170, 20);
 		rngType.setSelectedIndex(1);
@@ -352,16 +373,16 @@ public class Simulator extends JFrame implements ActionListener {
         buttonClearBuffers.setBounds(820, 570, 150, 25);
         buttonClearBuffers.addActionListener(this);
         
-        plotTypeTxt.setBounds(1160, 95, 100, 25);
-        plotTypeTxt.setText("Generate plot");
-        plotType.setBounds(1160, 120, 100, 30);
-        plotType.addActionListener(this);
-		
 		//Add to JPanel
         setStatus("Setting up window", false);
 		window.add(buttonRun);
 		window.add(buttonStop);
 		window.add(buttonClr);
+		window.add(plotTypeX);
+		window.add(plotTypeY);
+		window.add(plotTypeTxt);
+		window.add(plotMake);
+		window.add(plotClear);
 		window.add(iterationsTxt);
 		window.add(iterations);
 		window.add(speedTxt);
@@ -413,9 +434,6 @@ public class Simulator extends JFrame implements ActionListener {
 		window.add(BufferTxt);
 		window.add(BufferSelect);
 		window.add(buttonClearBuffers);
-		
-		window.add(plotType);
-		window.add(plotTypeTxt);
 		
 		//Read config
 	    System.out.println("Working Directory = " + System.getProperty("user.dir"));
@@ -805,11 +823,15 @@ public class Simulator extends JFrame implements ActionListener {
 			CAMTxt.setText("CAM TABLE (" + mySwitch.CAM.getSize() + " entries)");
 			
 			double sumLst = 0.0;
+			double sumTx = 0.0;
 			double sumTotal = 0.0;
+			double sumBr = 0.0;
 			for(Integer i = 0; i < PORTNUMBER; i++)
 			{
 				sumLst += Integer.valueOf(packetsLst[i].getText());
+				sumTx += Integer.valueOf(packetsTx[i].getText());
 				sumTotal += Integer.valueOf(packetsRx[i].getText());
+				sumBr += Integer.valueOf(packetsBrd[i].getText());
 			}
 			//System.out.println(sumLst + " " + sumTotal + "\n");
 			Double losts = (sumLst / (sumTotal + sumLst)) * 100;
@@ -821,7 +843,13 @@ public class Simulator extends JFrame implements ActionListener {
 			dataServed.setText( "Data served: " + Double.toString(DataOutVal) + " Mb");
 			Buffer.setText("Rx:\n"+ mySwitch.ethernet[BufferSelect.getSelectedIndex() ].Rx.getString() + "\nTx:\n" + mySwitch.ethernet[ BufferSelect.getSelectedIndex() ].Tx.getString() );
 			
+			plotData_CAMTTL.addElement((double) mySwitch.CAM.defaultValidity);
+			plotData_Broadcast.addElement((double) broadcastTreshold);
+			plotData_Received.addElement(sumTotal);
+			plotData_Transmitted.addElement(sumTx);
 			plotData_Losts.addElement(losts);
+			plotData_BroadcastTx.addElement(sumBr);
+			plotData_Intensity.addElement(generatorParam1);
 			plotData_TrafficIn.addElement(DataInVal);
 			plotData_TrafficOut.addElement(DataOutVal);
 			
@@ -900,6 +928,18 @@ public class Simulator extends JFrame implements ActionListener {
 			dataInbound.setText("Data in: 0 Mb");
 			dataServed.setText("Data served: 0 Mb");
 			setStatus("Statistics cleared", false);
+		}
+		if(e.getSource() == plotClear)
+		{
+			plotData_CAMTTL.clear();
+			plotData_Broadcast.clear();
+			plotData_Received.clear();
+			plotData_Transmitted.clear();
+			plotData_Losts.clear();
+			plotData_Intensity.clear();
+			plotData_TrafficIn.clear();
+			plotData_TrafficOut.clear();
+			setStatus("Chart data has been cleared", false);
 		}
 		if(e.getSource() == buttonFlushCAM)
 		{
@@ -1014,22 +1054,63 @@ public class Simulator extends JFrame implements ActionListener {
 				setStatus("Broadcast frames will be pushed even if interfaces engress is full", false);
 			}
 		}
-		if(e.getSource() == plotType)
+		if(e.getSource() == plotMake)
 		{
-			switch(plotType.getSelectedIndex() + 1)
+			if(plotData_Transmitted.isEmpty())
 			{
-				case 1 :
-				{
-					//PlotWindow plot = new PlotWindow(plotData_TrafficOut, plotData_Losts, plotType.getSelectedItem().toString());
-					plot.XYLineChart chart = new plot.XYLineChart(plotData_TrafficOut, plotData_Losts, plotType.getSelectedItem().toString(), "Data out", "% lost");
-				}
-				//
-				//
-				default :
-				{
-					setStatus("Plotting failed", true);
-				}
+				setStatus("Nothing to plot (yet)", true);
+				return;
 			}
+			Vector<Double> DataX;
+			Vector<Double> DataY;
+			switch(plotTypeX.getSelectedIndex())
+			{
+				case 0 : DataX = plotData_CAMTTL;
+						 break;
+				case 1 : DataX = plotData_Broadcast;
+				 		 break;
+				case 2 : DataX = plotData_Received;
+						 break;
+				case 3 : DataX = plotData_Transmitted;
+				 		 break;
+				case 4 : DataX = plotData_Losts;
+				 		 break;
+				case 5 : DataX = plotData_BroadcastTx;
+				 		 break;
+				case 6 : DataX = plotData_Intensity;
+						 break;
+				case 7 : DataX = plotData_TrafficIn;
+				 		 break;
+				case 8 : DataX = plotData_TrafficOut;
+				 		 break;
+				default: return;
+			}
+			switch(plotTypeY.getSelectedIndex())
+			{
+				case 0 : DataY = plotData_CAMTTL;
+						 break;
+				case 1 : DataY = plotData_Broadcast;
+				 		 break;
+				case 2 : DataY = plotData_Received;
+						 break;
+				case 3 : DataY = plotData_Transmitted;
+				 		 break;
+				case 4 : DataY = plotData_Losts;
+				 		 break;
+				case 5 : DataY = plotData_BroadcastTx;
+				 		 break;
+				case 6 : DataY = plotData_Intensity;
+						 break;
+				case 7 : DataY = plotData_TrafficIn;
+				 		 break;
+				case 8 : DataY = plotData_TrafficOut;
+				 		 break;
+				default: return;
+			}
+			new plot.XYLineChart(DataX, DataY,
+					plotTypeY.getSelectedItem().toString() + " = f(" + plotTypeX.getSelectedItem().toString() +")",
+					plotTypeX.getSelectedItem().toString(), plotTypeY.getSelectedItem().toString() );
+			
 		}
 		for(Integer i = 0; i < PORTNUMBER; i++)
 		{
@@ -1065,7 +1146,10 @@ public class Simulator extends JFrame implements ActionListener {
 		buttonFlushCAM.setEnabled(true);
 		buttonClearBuffers.setEnabled(true);
 		speed.setEnabled(true);
-		plotType.setEnabled(true);
+		plotTypeX.setEnabled(true);
+		plotTypeY.setEnabled(true);
+		plotMake.setEnabled(true);
+		plotClear.setEnabled(true);
 		for(Integer i = 0; i < PORTNUMBER; i++) ethernet[i].setEnabled(true);
 		frameMinDelay.setEnabled(true);
 		rngType.setEnabled(true);
@@ -1092,7 +1176,10 @@ public class Simulator extends JFrame implements ActionListener {
 		buttonFlushCAM.setEnabled(false);
 		buttonClearBuffers.setEnabled(false);
 		speed.setEnabled(false);
-		plotType.setEnabled(false);
+		plotTypeX.setEnabled(false);
+		plotTypeY.setEnabled(false);
+		plotMake.setEnabled(false);
+		plotClear.setEnabled(false);
 		for(Integer i = 0; i < PORTNUMBER; i++) ethernet[i].setEnabled(false);
 		frameMinDelay.setEnabled(false);
 		rngType.setEnabled(false);
