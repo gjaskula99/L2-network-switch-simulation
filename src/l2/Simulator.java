@@ -32,6 +32,7 @@ import RNG.Uniform;
 import RNG.Exponential;
 import RNG.Normal;
 import plot.PlotWindow;
+import plot.XYLineChart;
 
 public class Simulator extends JFrame implements ActionListener {
 	private static final long serialVersionUID = 1L;
@@ -139,7 +140,7 @@ public class Simulator extends JFrame implements ActionListener {
 	JComboBox<Integer> BufferSelect = new JComboBox<Integer>(InterfaceStrings);
 	
 	//Plotting
-	String plotTypes[] = {"Wykres_1", "Wykres_2", "Wykres_3", "Wykres_4", "Wykres_5"};
+	String plotTypes[] = {"Data out / % lost", "Wykres_2", "Wykres_3", "Wykres_4", "Wykres_5"};
 	JComboBox plotType = new JComboBox(plotTypes);
 	JLabel plotTypeTxt = new JLabel();
 	//Plot data
@@ -1019,7 +1020,8 @@ public class Simulator extends JFrame implements ActionListener {
 			{
 				case 1 :
 				{
-					PlotWindow plot = new PlotWindow(plotData_TrafficOut, plotData_Losts);
+					//PlotWindow plot = new PlotWindow(plotData_TrafficOut, plotData_Losts, plotType.getSelectedItem().toString());
+					plot.XYLineChart chart = new plot.XYLineChart(plotData_TrafficOut, plotData_Losts, plotType.getSelectedItem().toString(), "Data out", "% lost");
 				}
 				//
 				//
@@ -1063,6 +1065,7 @@ public class Simulator extends JFrame implements ActionListener {
 		buttonFlushCAM.setEnabled(true);
 		buttonClearBuffers.setEnabled(true);
 		speed.setEnabled(true);
+		plotType.setEnabled(true);
 		for(Integer i = 0; i < PORTNUMBER; i++) ethernet[i].setEnabled(true);
 		frameMinDelay.setEnabled(true);
 		rngType.setEnabled(true);
@@ -1089,6 +1092,7 @@ public class Simulator extends JFrame implements ActionListener {
 		buttonFlushCAM.setEnabled(false);
 		buttonClearBuffers.setEnabled(false);
 		speed.setEnabled(false);
+		plotType.setEnabled(false);
 		for(Integer i = 0; i < PORTNUMBER; i++) ethernet[i].setEnabled(false);
 		frameMinDelay.setEnabled(false);
 		rngType.setEnabled(false);
