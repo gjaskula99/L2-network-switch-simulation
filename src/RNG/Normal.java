@@ -16,19 +16,17 @@ public class Normal extends Random{
 	
 	public double getNext() {
 		double x = 0;
-		Uniform uniform = new Uniform();
 		for(Integer i = 0; i < 6; i++)
 		{
-			x += uniform.getNext();
+			x += Math.random();
 		}
 		return ((x / 6)-0.5)*10*deviation + mean;
 	}
 	public double getNext(Integer n) {
 		double x = 0;
-		Uniform uniform = new Uniform();
 		for(Integer i = 0; i < n; i++)
 		{
-			x += uniform.getNext();
+			x += Math.random();
 		}
 		return ((x / n)-0.5)*10*deviation + mean;
 	}

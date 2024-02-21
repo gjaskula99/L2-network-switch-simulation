@@ -7,7 +7,7 @@ Poznań University of Technology, 2023-2024
 
 **This program is for educational purposes only and is provided as it is with absolutely no warranty.** As there is no detailed public documentation refering to hardware and way it exactly operates it is impossible to recreate the L2 switch with 100% accuracy. Therefore this software is mathematical model simulating an abstract device. Some results may differ from real networking equipment.
 
-<img width="1299" alt="Screenshot 2024-01-13 at 13 21 34" src="https://github.com/gjaskula99/L2-network-switch-simulation/assets/81091594/c1eb0f07-d113-455e-974e-c80efb7452f8">
+![obraz](https://github.com/gjaskula99/L2-network-switch-simulation/assets/81091594/4ae1d01c-8b27-4ed2-87d9-96d46dee4966)
 
 ***
 
@@ -25,6 +25,7 @@ This program is simulating layer 2 network switch with 8 ethernet interfaces. Ea
 - Adjustable buffers and CAM (MAC) table size
 - MAC flooding mode to demonstrate CAM table attack
 - Ability to read settings from configfile
+- Displaying results on charts
 - Image of switch with flashing LEDs
 
 Simulator is run for time specified in seconds. **Time given refers to REAL COMPUTING TIME, not switch running time** to ensure it will not take ethernity to complete. It means running speed may differ depending on hardware. Simulation can be resumed with keeping current results. Button *HALT* is supposed to stop simulator in emergency - use with caution as it violently kills the thread.
