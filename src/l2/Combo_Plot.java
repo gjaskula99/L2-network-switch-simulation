@@ -39,7 +39,12 @@ public class Combo_Plot {
                     frame.setLocationRelativeTo(null);
                     frame.setVisible(true);
                 } else if (plot.equals("Wykres_2")) {
-                    // KOD TWORZĄCY DRUGI WYKRES
+                	JFrame frame = new JFrame();
+                    frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+                    frame.add(new SecondPlot());
+                    frame.setSize(600, 400);
+                    frame.setLocationRelativeTo(null);
+                    frame.setVisible(true);
                 } else if (plot.equals("Wykres_3")) {
                     // KOD TWORZĄCY TRZECI WYKRES
                 } else if (plot.equals("Wykres_4")) {
@@ -75,6 +80,43 @@ class Plots extends JPanel {
         double scale = (double) (height - 2 * marg) / getMax();
 
         graph.setPaint(Color.RED);
+
+        for (int i = 0; i < cord.length; i++) {
+            double x1 = marg + i * x;
+            double y1 = height - marg - scale * cord[i];
+            graph.fill(new Ellipse2D.Double(x1 - 2, y1 - 2, 4, 4));
+        }
+    }
+
+    private int getMax() {
+        int max = -Integer.MAX_VALUE;
+        for (int i = 0; i < cord.length; i++) {
+            if (cord[i] > max)
+                max = cord[i];
+        }
+        return max;
+    }
+}
+
+class SecondPlot extends JPanel {
+    int[] cord = {1, 10, 300, 70};
+    int marg = 60;
+
+    protected void paintComponent(Graphics grf) {
+        super.paintComponent(grf);
+        Graphics2D graph = (Graphics2D) grf;
+        graph.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+        int width = getWidth();
+        int height = getHeight();
+
+        graph.draw(new Line2D.Double(marg, marg, marg, height - marg));
+        graph.draw(new Line2D.Double(marg, height - marg, width - marg, height - marg));
+
+        double x = (double) (width - 2 * marg) / (cord.length - 1);
+        double scale = (double) (height - 2 * marg) / getMax();
+
+        graph.setPaint(Color.BLUE);
 
         for (int i = 0; i < cord.length; i++) {
             double x1 = marg + i * x;
