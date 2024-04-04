@@ -696,6 +696,7 @@ public class Simulator extends JFrame implements ActionListener {
 							{
 								for(int ii = 0; ii < PORTNUMBER; ii++) //Loop through all interfaces to check if not full
 								{
+									if(ii == i) continue; //Skip source interface
 									if(mySwitch.ethernet[i].isDown()) continue;
 									if(mySwitch.ethernet[i].Tx.isFull())
 									{
