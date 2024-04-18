@@ -31,6 +31,7 @@ import RNG.Random;
 import RNG.Uniform;
 import RNG.Exponential;
 import RNG.Normal;
+import RNG.Constant;
 import plot.XYLineChart;
 
 public class Simulator extends JFrame implements ActionListener {
@@ -45,9 +46,9 @@ public class Simulator extends JFrame implements ActionListener {
 	static final Integer PORTNUMBER = 8;
 	static Integer INTERFACESPEED = 6400;
 	
-	enum RNGTYPE {UNIFORM, EXP, NORMAL};
+	enum RNGTYPE {UNIFORM, EXP, NORMAL, CONST};
 	RNGTYPE rngSelected = RNGTYPE.EXP;
-	Exponential handlingRng = new Exponential(0.001);
+	Exponential handlingRng = new Exponential(0.1);
 	Uniform lengthRng = new Uniform();
 	
 	double TotalLost = 0.0;
@@ -73,10 +74,10 @@ public class Simulator extends JFrame implements ActionListener {
 	JTextField iterations = new JTextField();
 	JLabel speedTxt = new JLabel("eth speed (bytes)");
 	JTextField speed = new JTextField("6400");
-	String[] rngTypeString = {"Uniform", "Exponential", "Normal"};
+	String[] rngTypeString = {"Uniform", "Exponential", "Normal", "Constant"};
 	JComboBox<String> rngType = new JComboBox<String>(rngTypeString);
 	JLabel rngTypeTxt = new JLabel();
-	String[] handlingString = {"Instant", "10% of frame length", "25% of frame length", "50% of frame length" , "100% of frame length" , "Exp(0.001)"};
+	String[] handlingString = {"Instant", "10% of frame length", "25% of frame length", "50% of frame length" , "100% of frame length" , "Exp(0.001)", "Exp(0.01)", "Exp(0.1)"};
 	JTextField rngParam1 = new JTextField();
 	JTextField rngParam2 = new JTextField();
 	JLabel rngParamsTxt = new JLabel();
@@ -125,7 +126,7 @@ public class Simulator extends JFrame implements ActionListener {
 	JLabel packetsBrdTxt = new JLabel("Brdcst Tx:");
 	JLabel packetsLstTotal = new JLabel("Total lost: 0.0%");
 	JLabel dataInbound = new JLabel("Data in: 0 Mb");
-	JLabel dataServed = new JLabel("Data served: 0 Mb");
+	JLabel dataServed = new JLabel("Data out: 0 Mb");
 	
 	JTextArea CAM = new JTextArea();
 	JScrollPane CAMScroll = new JScrollPane(CAM);
@@ -548,10 +549,13 @@ public class Simulator extends JFrame implements ActionListener {
 			//Setup RNG
 			if(rngSelected == RNGTYPE.UNIFORM)
 				for(Integer i = 0; i < PORTNUMBER; i++) interfaceRNG[i] = new Uniform();
-			if(rngSelected == RNGTYPE.EXP)
+			else if(rngSelected == RNGTYPE.EXP)
 				for(Integer i = 0; i < PORTNUMBER; i++) interfaceRNG[i] = new Exponential(generatorParam1);
-			if(rngSelected == RNGTYPE.NORMAL)
+			else if(rngSelected == RNGTYPE.NORMAL)
 				for(Integer i = 0; i < PORTNUMBER; i++) interfaceRNG[i] = new Normal(generatorParam1, generatorParam2);
+			else if(rngSelected == RNGTYPE.CONST)
+				for(Integer i = 0; i < PORTNUMBER; i++) interfaceRNG[i] = new Constant(generatorParam1);
+			
 			Uniform floodRNG = new Uniform();
 			
 			if(!CutThrough)
@@ -734,10 +738,10 @@ public class Simulator extends JFrame implements ActionListener {
 								setStatus("Switching frame from interface " + f.getSource().getInterface() + " to " + targetInterface, false);
 								//Add handling time
 								if(handlingMode == 1) mySwitch.ethernet[i].Tx.IdleSwitch += f.getLength() / 10;
-								if(handlingMode == 2) mySwitch.ethernet[i].Tx.IdleSwitch += f.getLength() / 4;
-								if(handlingMode == 3) mySwitch.ethernet[i].Tx.IdleSwitch += f.getLength() / 2;
-								if(handlingMode == 4) mySwitch.ethernet[i].Tx.IdleSwitch += f.getLength();
-								if(handlingMode == 5) mySwitch.ethernet[i].Tx.IdleSwitch += f.getLength() + (int) handlingRng.getNext() * 1;
+								else if(handlingMode == 2) mySwitch.ethernet[i].Tx.IdleSwitch += f.getLength() / 4;
+								else if(handlingMode == 3) mySwitch.ethernet[i].Tx.IdleSwitch += f.getLength() / 2;
+								else if(handlingMode == 4) mySwitch.ethernet[i].Tx.IdleSwitch += f.getLength();
+								else if(handlingMode >= 5) mySwitch.ethernet[i].Tx.IdleSwitch += (int) handlingRng.getNext();
 							}
 							else
 							{
@@ -748,10 +752,10 @@ public class Simulator extends JFrame implements ActionListener {
 									mySwitch.ethernet[j].Tx.IdleSwitch = f.getLength();
 									//Add handling time
 									if(handlingMode == 1) mySwitch.ethernet[i].Tx.IdleSwitch += f.getLength() / 10;
-									if(handlingMode == 2) mySwitch.ethernet[i].Tx.IdleSwitch += f.getLength() / 4;
-									if(handlingMode == 3) mySwitch.ethernet[i].Tx.IdleSwitch += f.getLength() / 2;
-									if(handlingMode == 4) mySwitch.ethernet[i].Tx.IdleSwitch += f.getLength();
-									if(handlingMode == 5) mySwitch.ethernet[i].Tx.IdleSwitch += f.getLength() + (int) handlingRng.getNext() * 1;
+									else if(handlingMode == 2) mySwitch.ethernet[i].Tx.IdleSwitch += f.getLength() / 4;
+									else if(handlingMode == 3) mySwitch.ethernet[i].Tx.IdleSwitch += f.getLength() / 2;
+									else if(handlingMode == 4) mySwitch.ethernet[i].Tx.IdleSwitch += f.getLength();
+									else if(handlingMode >= 5) mySwitch.ethernet[i].Tx.IdleSwitch += (int) handlingRng.getNext();
 									byteCounter++;
 								}
 								Integer Brd = Integer.valueOf(packetsBrd[i].getText()) + 1;
@@ -802,7 +806,7 @@ public class Simulator extends JFrame implements ActionListener {
 					Double losts = (sumLst / (sumTotal + sumLst)) * 100;
 					packetsLstTotal.setText( "Total lost: " + Double.toString(Math.round(losts*10000)/10000.0d) + "%");
 					dataInbound.setText( "Data in: " + Double.toString(Math.round(dataIn / 1024 / 1024 *10000)/10000.0d) + " Mb");
-					dataServed.setText( "Data served: " + Double.toString(Math.round(dataOut / 1024 / 1024 *10000)/10000.0d) + " Mb");
+					dataServed.setText( "Data out: " + Double.toString(Math.round(dataOut / 1024 / 1024 *10000)/10000.0d) + " Mb");
 					Buffer.setText("Rx:\n"+ mySwitch.ethernet[BufferSelect.getSelectedIndex() ].Rx.getString() + "\nTx:\n" + mySwitch.ethernet[ BufferSelect.getSelectedIndex() ].Tx.getString() );
 				}
 			} //SIMULATION END
@@ -841,7 +845,7 @@ public class Simulator extends JFrame implements ActionListener {
 			DataOutVal += Math.round( (dataOut / 1024 / 1024) *10000)/10000.0d;
 			packetsLstTotal.setText( "Total lost: " + Double.toString(Math.round(losts*10000)/10000.0d) + "%");
 			dataInbound.setText( "Data in: " + Double.toString(DataInVal) + " Mb");
-			dataServed.setText( "Data served: " + Double.toString(DataOutVal) + " Mb");
+			dataServed.setText( "Data out: " + Double.toString(DataOutVal) + " Mb");
 			Buffer.setText("Rx:\n"+ mySwitch.ethernet[BufferSelect.getSelectedIndex() ].Rx.getString() + "\nTx:\n" + mySwitch.ethernet[ BufferSelect.getSelectedIndex() ].Tx.getString() );
 			
 			plotData_CAMTTL.addElement((double) mySwitch.CAM.defaultValidity);
@@ -927,7 +931,7 @@ public class Simulator extends JFrame implements ActionListener {
 			DataOutVal = 0.0;
 			packetsLstTotal.setText("Total lost: 0.0%");
 			dataInbound.setText("Data in: 0 Mb");
-			dataServed.setText("Data served: 0 Mb");
+			dataServed.setText("Data out: 0 Mb");
 			setStatus("Statistics cleared", false);
 		}
 		if(e.getSource() == plotClear)
@@ -985,10 +989,21 @@ public class Simulator extends JFrame implements ActionListener {
 				rngParam2.setEnabled(true);
 				rngParam2.setText("Deviation");
 			}
+			if(rngType.getSelectedIndex() == 3)
+			{
+				rngSelected = RNGTYPE.CONST;
+				setStatus("Random number generator switched to constant value", false);
+				rngParam1.setText("Mean");
+				rngParam2.setEnabled(false);		
+				rngParam2.setText("N/A");
+			}
 		}
 		if(e.getSource() == handling)
 		{
 			handlingMode = handling.getSelectedIndex();
+			if(handlingMode == 5) handlingRng = new Exponential(0.001);
+			else if(handlingMode == 6) handlingRng = new Exponential(0.01);
+			else if(handlingMode == 7) handlingRng = new Exponential(0.1);
 			setStatus("Handling time set to " + handling.getSelectedItem(), false);
 		}
 		if(e.getSource() == frameLengthFixed)
