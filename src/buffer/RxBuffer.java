@@ -8,9 +8,13 @@ public class RxBuffer extends Buffer {
 		super(size);
 		this.receiving = new int[size];
 		this.Idle = 0;
+		this.head = 0;
+		this.tail = 0;
 	}
 	int receiving[];
 	public int Idle; //Time to next frame
+	private int head;
+    private int tail;
 	
 	public int getStatus(int index)
 	{
@@ -29,21 +33,18 @@ public class RxBuffer extends Buffer {
 	public boolean push(Frame f)
 	{
 		if(this.isFull()) return false;
-		buffer[this.currentSize] = f;
-		receiving[this.currentSize] = f.getLength();
+		buffer[tail] = f;
+		receiving[tail] = f.getLength();
+        tail = (tail + 1) % maxSize;  // Move tail forward circularly
 		currentSize++;
 		return true;
 	}
 	public Frame pop()
 	{
 		assert this.currentSize > 0;
-		currentSize--;
-		Frame f = buffer[0];
-		this.receiving[0] = 0;
-		for(int i = 0; i < currentSize; i++)
-		{
-			buffer[i] = buffer[i + 1];
-		}
+		Frame f = buffer[head];
+		head = (head + 1) % maxSize;  // Move head forward circularly
+        currentSize--;
 		return f;
 	}
 }
