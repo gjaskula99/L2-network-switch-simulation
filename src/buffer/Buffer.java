@@ -8,11 +8,15 @@ public class Buffer {
 		this.buffer = new Frame[size];
 		this.maxSize = size;
 		this.currentSize = 0;
+		this.head = 0;
+		this.tail = 0;
 	}
 	
 	public Frame buffer[];
 	int maxSize;
 	int currentSize;
+	private int head;
+    private int tail;
 	
 	public boolean isFull()
 	{
@@ -32,30 +36,27 @@ public class Buffer {
 	{
 		return this.currentSize;
 	}
-	public boolean push(Frame f)
-	{
-		if(this.isFull()) return false;
-		buffer[this.currentSize] = f;
-		currentSize++;
-		return true;
-	}
-	public Frame pop()
-	{
-		assert this.currentSize > 0;
-		currentSize--;
-		Frame f = buffer[0];
-		for(int i = 0; i < currentSize; i++)
-		{
-			buffer[i] = buffer[i + 1];
-		}
-		return f;
-	}
-	
-	public void clear()
-	{
-		for(int i = 0; i < currentSize; i++) this.pop();
-		this.currentSize = 0;
-	}
+	public boolean push(Frame f) {
+        if (this.isFull()) return false;
+        buffer[tail] = f;
+        tail = (tail + 1) % maxSize;  // Move tail forward circularly
+        currentSize++;
+        return true;
+    }
+
+    public Frame pop() {
+        if (this.isEmpty()) throw new IllegalStateException("Buffer is empty");
+        Frame f = buffer[head];
+        head = (head + 1) % maxSize;  // Move head forward circularly
+        currentSize--;
+        return f;
+    }
+
+    public void clear() {
+        head = 0;
+        tail = 0;
+        currentSize = 0;
+    }
 	
 	public String getString()
 	{

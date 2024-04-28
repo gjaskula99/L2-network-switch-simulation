@@ -6,7 +6,6 @@ public class Frame {
 		this.length = 0;
 		this.sourceAddress = new l2.MAC();
 		this.destinationAddress = new l2.MAC();
-		this.state = state.BLANK;
 	}
 	
 	public Frame(int initLength, int sourceInterface, int destInterface, int sourceHost, int destHost)
@@ -16,7 +15,6 @@ public class Frame {
 		else this.length = initLength;
 		this.sourceAddress = new l2.MAC(sourceInterface, sourceHost);
 		this.destinationAddress = new l2.MAC(destInterface, destHost);
-		this.state = state.INIT;
 		this.isBroadcast = false;
 	}
 	
@@ -27,7 +25,6 @@ public class Frame {
 		else this.length = initLength;
 		this.sourceAddress = new l2.MAC(sourceInterface, sourceHost);
 		this.destinationAddress = new l2.MAC();
-		this.state = state.INIT;
 		this.isBroadcast = true;
 	}
 	
@@ -36,7 +33,6 @@ public class Frame {
 		this.length = 64;
 		this.sourceAddress = new l2.MAC(mac);
 		this.destinationAddress = new l2.MAC();
-		this.state = state.INIT;
 		this.isBroadcast = true;
 	}
 	
@@ -44,9 +40,6 @@ public class Frame {
 	l2.MAC sourceAddress;
 	l2.MAC destinationAddress;
 	Boolean isBroadcast;
-	
-	enum State {BLANK, INIT, RECEIVING, RECEIVED, SWITCINHG, SWITCHED, TRANSMITING, DONE, LOST};
-	public State state;
 	
 	public int getLength()
 	{
